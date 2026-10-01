@@ -1,0 +1,224 @@
+﻿@page
+@model Inventario_QR.Pages.ProductAssignmentModel
+@{
+    ViewData["Title"] = "Lista con Asignación de Productos";
+}
+
+<div class="container-fluid mt-3">
+    <!-- Cabecera Responsiva: Se apila en móviles y se alinea en pantallas medianas/grandes -->
+    <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center mb-4 gap-3">
+        <div>
+            <h2 class="fw-bold text-dark mb-1">Lista de Productos con Asignación</h2>
+            <p class="text-muted small mb-0">Revisión de inventario con auditoría detallada por equipo.</p>
+        </div>
+        <!-- Contenedor de botones con ajuste adaptable (flex-wrap) -->
+        <div class="d-flex flex-wrap gap-2">
+            <a asp-page="/ProductList" class="btn btn-outline-secondary btn-sm">📋 Lista General</a>
+            <a asp-page="/Privacy" class="btn btn-secondary btn-sm">👤 Asignación</a>
+            <button onclick="window.print();" class="btn btn-success btn-sm">📥 Imprimir</button>
+            <a asp-page="./Index" class="btn btn-outline-dark btn-sm">&larr; Volver</a>
+        </div>
+    </div>
+
+    <!-- Filtro por Departamento -->
+    <!-- Filtro por Departamento -->
+    <form method="get" class="row g-3 mb-3 align-items-center d-print-none">
+        <div class="col-auto">
+            <label for="SelectedDepartment" class="col-form-label fw-bold small">Filtrar por Departamento:</label>
+        </div>
+        <div class="col-auto">
+            <select name="SelectedDepartment" class="form-select form-select-sm" onchange="this.form.submit()">
+                <option value="">-- Todos los Departamentos --</option>
+                @foreach (var dept in Model.Departments)
+                {
+                    <option value="@dept" selected="@(Model.SelectedDepartment == dept ? "selected" : null)">@dept</option>
+                }
+            </select>
+        </div>
+    </form>
+
+    <div class="card shadow-sm border-0 rounded-3">
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-bordered table-hover align-middle mb-0">
+                    <thead class="table-light text-uppercase fs-7 text-secondary text-center">
+                        <tr>
+                            <th class="py-3" style="width: 50px;">Nro</th>
+                            <th class="py-3" style="width: 110px;">Código</th>
+                            <th class="py-3" style="width: 150px;">Producto</th>
+                            <th class="py-3" style="width: 180px;">Asignado A / Ubicación</th>
+                            <th class="py-3">Elemento (Bloque Principal / Accesorio)</th>
+                            <th class="py-3" style="width: 100px;">Cant. Obtenida</th>
+                            <th class="py-3" style="width: 230px;">Check / Motivo u Observación</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @if (Model.AssignmentList != null && Model.AssignmentList.Any())
+                        {
+                            @foreach (var item in Model.AssignmentList)
+                            {
+                                var characteristics = item.Characteristics != null ? item.Characteristics.ToList() : new List<ProductAssignmentModel.DetailRowVm>();
+                                var complements = item.Complements != null ? item.Complements.ToList() : new List<ProductAssignmentModel.DetailRowVm>();
+
+                                int hasChars = characteristics.Any() ? 1 : 0;
+                                int compCount = complements.Count;
+                                int totalRows = hasChars + compCount;
+                                if (totalRows == 0) totalRows = 1;
+
+                                bool isFirstRow = true;
+
+                                <!-- 1. FILA DEL BLOQUE PRINCIPAL (Características agrupadas) -->
+                                @if (hasChars > 0)
+                                {
+                                    <tr>
+                                        @if (isFirstRow)
+                                        {
+                                            <td class="text-center fw-bold align-middle" rowspan="@totalRows">@item.RowNumber</td>
+                                            <td class="align-middle" rowspan="@totalRows"><strong class="text-primary">@item.Code</strong></td>
+                                            <td class="fw-medium text-dark align-middle" rowspan="@totalRows">@item.ProductName</td>
+                                            <td class="align-middle" rowspan="@totalRows">
+                                                @if (item.AssignedToName != "No asignado")
+                                                {
+                                                    <div class="fw-bold text-success small">👤 @item.AssignedToName</div>
+                                                    @if (!string.IsNullOrEmpty(item.Localization))
+                                                    {
+                                                        <div class="text-muted small mt-1">📍 <em>@item.Localization</em></div>
+                                                    }
+                                                }
+                                                else
+                                                {
+                                                    <span class="badge bg-warning text-dark">No asignado</span>
+                                                }
+                                            </td>
+                                            isFirstRow = false;
+                                        }
+
+                                        <td class="align-middle py-2">
+                                            <div class="d-flex align-items-center justify-content-between">
+                                                <div class="d-flex align-items-center">
+                                                    <span class="fw-bold text-dark small">💻 Bloque Principal:</span>
+                                                </div>
+                                                <span class="badge bg-light text-dark border px-2 small">Cantidad: 1</span>
+                                            </div>
+                                            <div class="ps-2 mt-1 text-muted small">
+                                                @foreach (var ch in characteristics)
+                                                {
+                                                    <div>• @ch.DetailName@(string.IsNullOrEmpty(ch.DetailValue) ? "" : $": {ch.DetailValue}")</div>
+                                                }
+                                            </div>
+                                        </td>
+
+                                        <td class="text-center align-middle">
+                                            <input type="text" class="form-control form-control-sm text-center" />
+                                        </td>
+                                        <td class="align-middle">
+                                            <div class="input-group input-group-sm">
+                                                <input type="text" class="form-control form-control-sm" placeholder="Observación..." />
+                                                <div class="input-group-text bg-white">
+                                                    <input type="checkbox" class="form-check-input mt-0" title="Marcar como verificado" />
+                                                </div>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                }
+
+                                <!-- 2. FILAS PARA CADA ACCESORIO INDEPENDIENTE -->
+                                @foreach (var comp in complements)
+                                {
+                                    <tr>
+                                        @if (isFirstRow)
+                                        {
+                                            <td class="text-center fw-bold align-middle" rowspan="@totalRows">@item.RowNumber</td>
+                                            <td class="align-middle" rowspan="@totalRows"><strong class="text-primary">@item.Code</strong></td>
+                                            <td class="fw-medium text-dark align-middle" rowspan="@totalRows">@item.ProductName</td>
+                                            <td class="align-middle" rowspan="@totalRows">
+                                                @if (item.AssignedToName != "No asignado")
+                                                {
+                                                    <div class="fw-bold text-success small">👤 @item.AssignedToName</div>
+                                                    @if (!string.IsNullOrEmpty(item.Localization))
+                                                    {
+                                                        <div class="text-muted small mt-1">📍 <em>@item.Localization</em></div>
+                                                    }
+                                                }
+                                                else
+                                                {
+                                                    <span class="badge bg-warning text-dark">No asignado</span>
+                                                }
+                                            </td>
+                                            isFirstRow = false;
+                                        }
+
+                                        <td class="align-middle py-2">
+                                            <div class="d-flex align-items-center justify-content-between">
+                                                <div class="d-flex align-items-center">
+                                                    <span class="text-dark small">@comp.DetailName@(string.IsNullOrEmpty(comp.DetailValue) ? "" : $": {comp.DetailValue}")</span>
+                                                </div>
+                                                <span class="badge bg-light text-dark border px-2 small">Cantidad: @comp.Amount</span>
+                                            </div>
+                                        </td>
+
+                                        <td class="text-center align-middle">
+                                            <input type="text" class="form-control form-control-sm text-center" />
+                                        </td>
+                                        <td class="align-middle">
+                                            <div class="input-group input-group-sm">
+                                                <input type="text" class="form-control form-control-sm" placeholder="Observación..." />
+                                                <div class="input-group-text bg-white">
+                                                    <input type="checkbox" class="form-check-input mt-0" title="Marcar como verificado" />
+                                                </div>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                }
+
+                                <!-- 3. SI EL PRODUCTO NO TIENE ELEMENTOS -->
+                                @if (hasChars == 0 && compCount == 0)
+                                {
+                                    <tr>
+                                        <td class="text-center fw-bold align-middle">@item.RowNumber</td>
+                                        <td class="align-middle"><strong class="text-primary">@item.Code</strong></td>
+                                        <td class="fw-medium text-dark align-middle">@item.ProductName</td>
+                                        <td class="align-middle">
+                                            @if (item.AssignedToName != "No asignado")
+                                            {
+                                                <div class="fw-bold text-success small">👤 @item.AssignedToName</div>
+                                                @if (!string.IsNullOrEmpty(item.Localization))
+                                                {
+                                                    <div class="text-muted small mt-1">📍 <em>@item.Localization</em></div>
+                                                }
+                                            }
+                                            else
+                                            {
+                                                <span class="badge bg-warning text-dark">No asignado</span>
+                                            }
+                                        </td>
+                                        <td class="align-middle text-muted fst-italic">Sin elementos registrados.</td>
+                                        <td class="text-center align-middle">
+                                            <input type="text" class="form-control form-control-sm text-center" />
+                                        </td>
+                                        <td class="align-middle">
+                                            <div class="input-group input-group-sm">
+                                                <div class="input-group-text bg-white">
+                                                    <input type="checkbox" class="form-check-input mt-0" title="Marcar como verificado" />
+                                                </div>
+                                                <input type="text" class="form-control form-control-sm" placeholder="Observación..." />
+                                            </div>
+                                        </td>
+                                    </tr>
+                                }
+                            }
+                        }
+                        else
+                        {
+                            <tr>
+                                <td colspan="7" class="text-center py-5 text-muted">
+                                    <p class="mb-0">No hay productos registrados en el sistema.</p>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>

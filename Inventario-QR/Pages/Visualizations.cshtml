@@ -1,0 +1,150 @@
+﻿@page "{id:int}"
+@model Inventario_QR.Pages.VisualizationsModel
+@{
+    ViewData["Title"] = "Acta de Asignación - " + Model.Product.ProductName;
+}
+
+<div class="container my-4">
+    <!-- Botones de Acción (Se ocultan al imprimir/generar PDF) -->
+    <div class="d-flex justify-content-between align-items-center mb-4 d-print-none">
+        <a asp-page="./Index" class="btn btn-outline-secondary">← Volver al Panel</a>
+        <div>
+            <button type="button" onclick="window.print();" class="btn btn-success fw-bold">
+                🖨️ Descargar / Imprimir PDF
+            </button>
+        </div>
+    </div>
+
+    <!-- Contenido del Acta -->
+    <div class="card shadow-sm border-0 p-5 bg-white">
+        <!-- Encabezado del Acta -->
+        <div class="text-center border-bottom pb-4 mb-4">
+            <h3 class="fw-bold text-success">ACTA DE ASIGNACIÓN DE ACTIVOS Y EQUIPO</h3>
+            <p class="text-muted mb-0">Sistema de Inventario y Control QR</p>
+        </div>
+
+        <!-- Información General -->
+        <div class="row mb-4">
+            <!-- Datos del Activo y Código QR Generado Automáticamente -->
+            <div class="col-md-6 border-end">
+                <h5 class="text-secondary border-bottom pb-2">📦 Datos del Activo</h5>
+                <div class="row align-items-center mt-2">
+                    <div class="col-7">
+                        <p class="mb-1"><strong>Nombre:</strong> @Model.Product.ProductName</p>
+                        <p class="mb-1"><strong>Código:</strong> @Model.Product.Code</p>
+                        <p class="mb-1"><strong>QR ID:</strong> <code id="qr-text">@Model.Product.Qr</code></p>
+                    </div>
+                    <div class="col-5 text-center">
+                        <!-- Contenedor donde se generará automáticamente el QR -->
+                        <div id="qrcode" class="p-2 bg-light border rounded d-inline-block shadow-sm"></div>
+                        <small class="d-block text-muted mt-1" style="font-size: 10px;">Escanee para ver detalles</small>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Datos del Responsable -->
+            <div class="col-md-6 ps-md-4">
+                <h5 class="text-secondary border-bottom pb-2">👤 Datos del Responsable / Destino</h5>
+                <p class="mb-1"><strong>Personal Asignado:</strong> @Model.Characteristic.PersonName</p>
+                <p class="mb-1"><strong>C.I.:</strong> @Model.Characteristic.PersonIdentification</p>
+                <p class="mb-1"><strong>Teléfono:</strong> @Model.Characteristic.PersonNumbers</p>
+                <p class="mb-1"><strong>Departamento:</strong> @Model.Characteristic.Localization</p>
+                <p class="mb-1"><strong>Fecha de Asignación:</strong> @Model.Characteristic.Date.ToString("dd/MM/yyyy HH:mm")</p>
+            </div>
+        </div>
+
+        <!-- Tabla de Componentes y Complementos -->
+        <div class="mb-5">
+            <h5 class="text-secondary border-bottom pb-2 mb-3">📋 Componentes y Accesorios Entregados</h5>
+            <div class="table-responsive">
+                <table class="table table-bordered align-middle">
+                    <thead class="table-light">
+                        <tr>
+                            <th style="width: 25%;">Estado</th>
+                            <th style="width: 40%;">Elemento</th>
+                            <th style="width: 15%;">Cantidad</th>
+                            <th style="width: 20%;">Observaciones / Serie</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @if (Model.Items.Any())
+                        {
+                            @foreach (var item in Model.Items)
+                            {
+                                <tr>
+                                    <td>
+                                        @if (item.Complement)
+                                        {
+                                            @if (item.IsSelected)
+                                            {
+                                                <span class="badge bg-success">Entregado / Incluido</span>
+                                            }
+                                            else
+                                            {
+                                                <span class="badge bg-secondary">No Incluido</span>
+                                            }
+                                        }
+                                        else
+                                        {
+                                            <span class="text-muted">Fijo del Sistema</span>
+                                        }
+                                    </td>
+                                    <td>
+                                        <strong>@item.DetailName</strong>
+                                    </td>
+                                    <td>
+                                        @(item.Complement? item.Amount.ToString() : "-")
+                                    </td>
+                                    <td>
+                                        @(string.IsNullOrEmpty(item.DetailsValue) ? "-" : item.DetailsValue)
+                                    </td>
+                                </tr>
+                            }
+                        }
+                        else
+                        {
+                            <tr>
+                                <td colspan="4" class="text-center text-muted">No hay componentes registrados.</td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Firmas de Conformidad -->
+        <div class="row mt-5 pt-5 text-center">
+            <div class="col-6">
+                <div class="border-top pt-2 mx-auto" style="width: 80%;">
+                    <p class="mb-0 fw-bold">Entregado por (Inventarios)</p>
+                </div>
+            </div>
+            <div class="col-6">
+                <div class="border-top pt-2 mx-auto" style="width: 80%;">
+                    <p class="mb-0 fw-bold">Recibido Conforme (Funcionario)</p>
+                    <p class="text-muted small">C.I.: @Model.Characteristic.PersonIdentification</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <!-- Librería externa para generar códigos QR dinámicamente en el navegador -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+    <script>
+        document.addEventListener("DOMContentLoaded", function () {
+            var currentUrl = window.location.href;
+            document.getElementById("qrcode").innerHTML = "";
+
+            new QRCode(document.getElementById("qrcode"), {
+                text: currentUrl,
+                width: 95,
+                height: 95,
+                colorDark: "#000000",
+                colorLight: "#ffffff",
+                correctLevel: QRCode.CorrectLevel.M
+            });
+        });
+    </script>
+}

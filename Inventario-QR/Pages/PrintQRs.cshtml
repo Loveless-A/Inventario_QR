@@ -1,0 +1,34 @@
+﻿@page
+@model Inventario_QR.Pages.PrintQRsModel
+@{
+    ViewData["Title"] = "Vista previa de etiquetas";
+}
+
+<div class="container-fluid mt-3">
+    <div class="d-flex justify-content-between align-items-center mb-3 no-print">
+        <h3 class="fw-bold">Vista previa de etiquetas (3x3 cm)</h3>
+        <div>
+            <button onclick="window.print()" class="btn btn-success shadow-sm fw-bold">🖨️ Imprimir Etiquetas</button>
+            <a asp-page="./Index" class="btn btn-outline-secondary shadow-sm">← Volver al Panel</a>
+        </div>
+    </div>
+
+    <div class="labels-container">
+        @if (Model.Products != null && Model.Products.Any())
+        {
+            @foreach (var item in Model.Products)
+            {
+                <div class="qr-label-card">
+                    <div class="product-name">@item.ProductName</div>
+                    <div class="product-code">@item.Code</div>
+                    <img src="https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=@Uri.EscapeDataString(item.TargetUrl)" alt="QR" class="qr-img" />
+                    <div class="qr-text">@item.Qr</div>
+                </div>
+            }
+        }
+        else
+        {
+            <p class="text-muted">No se seleccionaron elementos para imprimir.</p>
+        }
+    </div>
+</div>

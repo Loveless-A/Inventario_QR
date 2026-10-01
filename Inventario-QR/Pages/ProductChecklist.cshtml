@@ -1,0 +1,513 @@
+﻿@page "{id:int}"
+@model Inventario_QR.Pages.ProductChecklistModel
+@{
+    var isAssignMode = Model.Mode?.ToLower() == "assign";
+    ViewData["Title"] = (isAssignMode ? "Asignación de Persona: " : "Componentes y Detalles: ") + Model.Product.ProductName;
+}
+
+<div class="container mt-4 mb-5">
+    <div class="card shadow border-0">
+        <div class="card-header bg-success text-white d-flex justify-content-between align-items-center py-3">
+            <h4 class="mb-0">
+                @if (isAssignMode)
+                {
+                    <text>👥 Asignación de Persona y Complementos: @Model.Product.ProductName</text>
+                }
+                else
+                {
+                    <text>📦 Componentes y Detalles: @Model.Product.ProductName</text>
+                }
+            </h4>
+            <span class="badge bg-light text-dark fs-6">Código: @Model.Product.Code</span>
+        </div>
+        <div class="card-body">
+
+            @if (!string.IsNullOrEmpty(Model.StatusMessage))
+            {
+                <div class="alert alert-success alert-dismissible fade show" role="alert">
+                    @Model.StatusMessage
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                </div>
+            }
+            @if (!string.IsNullOrEmpty(Model.ErrorMessage))
+            {
+                <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                    @Model.ErrorMessage
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                </div>
+            }
+
+            @if (isAssignMode)
+            {
+                <!-- ================= MODO ASIGNAR ================= -->
+                <form method="post" asp-page-handler="SaveAssign">
+                    <input type="hidden" name="id" value="@Model.Id" />
+                    <input type="hidden" name="mode" value="assign" />
+
+                    <!-- A. SELECCIONAR PERSONAL, DESTINO Y COMENTARIO -->
+                    <div class="card bg-light border-0 p-4 mb-4 shadow-sm">
+                        <h5 class="mb-3 text-success">👤 Datos de Asignación y Destino</h5>
+
+                        <div class="row g-3">
+                            <!-- Columna Izquierda: Personal Asignado + Botón Nueva -->
+                            <div class="col-md-6">
+                                <label class="form-label fw-bold">Personal Asignado</label>
+                                <div class="input-group">
+                                    <input class="form-control" list="personsOptions" id="selectedPersonInput" value="@Model.AssignedPersonDisplayValue" placeholder="🔍 Buscar por nombre o CI..." required />
+                                    <button type="button" id="btnPersonAction" class="btn btn-outline-success fw-bold text-nowrap" data-bs-toggle="modal" data-bs-target="#registerPersonModal">
+                                        ➕ Nueva
+                                    </button>
+                                    <datalist id="personsOptions">
+                                        @foreach (var p in Model.AllPersons)
+                                        {
+                                            <option value="@p.LastName (CI: @p.Identification)"
+                                                    data-id="@p.Id"
+                                                    data-lastname="@p.LastName"
+                                                    data-identification="@p.Identification"
+                                                    data-numbers="@p.Numbers"
+                                                    data-active="@p.Active">
+                                            </option>
+                                        }
+                                    </datalist>
+                                    <input type="hidden" asp-for="SelectedPersonId" id="SelectedPersonId" />
+                                </div>
+                            </div>
+
+                            <!-- Columna Derecha: Departamento de Destino -->
+                            <div class="col-md-6">
+                                <label asp-for="Localization" class="form-label fw-bold text-success">📍 Departamento de Destino</label>
+                                <select asp-for="Localization" class="form-select" required>
+                                    <option value="">-- Seleccione un Departamento --</option>
+                                    @foreach (var depto in Model.DepartamentosBolivia)
+                                    {
+                                        <option value="@depto">@depto</option>
+                                    }
+                                </select>
+                            </div>
+
+                            <!-- Comentario de Entrega -->
+                            <div class="col-12">
+                                <label asp-for="AssignmentComment" class="form-label fw-bold text-success">💬 Comentario de Entrega / Estado de la Máquina</label>
+                                <textarea asp-for="AssignmentComment" class="form-control" rows="2" placeholder="Ej. Se entrega en buen estado con todos sus accesorios..."></textarea>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- B. REGISTRAR NUEVO ELEMENTO AL CATÁLOGO -->
+                    <div class="card bg-light border-0 p-4 mb-4 shadow-sm">
+                        <h5 class="mb-3 text-success">➕ Registrar Complemento / Elemento</h5>
+                        <div class="row g-3 align-items-center">
+                            <div class="col-md-6">
+                                <input type="text" asp-for="NewCatalogDetailName" class="form-control" placeholder="Nombre (Ej. Procesador, Mouse)" />
+                            </div>
+                            <div class="col-md-4">
+                                <div class="form-check mt-2">
+                                    <input type="checkbox" asp-for="NewCatalogIsComplement" class="form-check-input" id="isComplementCheckAssign" />
+                                    <label class="form-check-label fw-bold small" for="isComplementCheckAssign">¿Es un Complemento?</label>
+                                </div>
+                            </div>
+                            <div class="col-md-2 text-end">
+                                <button type="submit" asp-page-handler="RegisterCatalogItem" class="btn btn-success w-100 fw-bold">
+                                    + Registrar
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- C. TABLA DE COMPONENTES Y DETALLES -->
+                    <div class="card bg-light border-0 p-3 mb-4 shadow-sm">
+                        <div class="d-flex justify-content-between align-items-center mb-3">
+                            <h5 class="mb-0 text-secondary">📦 Lista de Componentes y Detalles (@Model.AllChecklistItems.Count)</h5>
+                        </div>
+                        <div class="mb-3">
+                            <input type="text" id="searchFilterAssign" class="form-control" placeholder="🔍 Buscar elemento..." />
+                        </div>
+                        <div class="table-responsive">
+                            <table class="table table-hover align-middle search-table-assign">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th style="width: 12%;">Seleccionar</th>
+                                        <th style="width: 30%;">Elemento</th>
+                                        <th style="width: 12%;">Cantidad</th>
+                                        <th style="width: 34%;">Observaciones / Serie</th>
+                                        <th style="width: 12%;" class="text-center">Gestión Catálogo</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @{
+                                        var sortedItems = Model.AllChecklistItems.OrderBy(x => x.Complement).ToList();
+                                    }
+                                    @for (int i = 0; i < sortedItems.Count; i++)
+                                    {
+                                        var item = sortedItems[i];
+                                        <tr class="searchable-row-assign">
+                                            <td>
+                                                <input type="hidden" name="AllChecklistItems[@i].DetailsId" value="@item.DetailsId" />
+                                                <input type="hidden" name="AllChecklistItems[@i].DetailName" value="@item.DetailName" />
+                                                <input type="hidden" name="AllChecklistItems[@i].Complement" value="@item.Complement.ToString().ToLower()" />
+
+                                                @if (item.Complement)
+                                                {
+                                                    <input type="checkbox" name="AllChecklistItems[@i].IsSelected" value="true" class="form-check-input checklist-checkbox" @(item.IsSelected ? "checked" : "") />
+                                                }
+                                                else
+                                                {
+                                                    <span class="text-muted">-</span>
+                                                    <input type="hidden" name="AllChecklistItems[@i].IsSelected" value="false" />
+                                                }
+                                            </td>
+                                            <td>
+                                                <strong class="item-name-assign">@item.DetailName</strong>
+                                                @if (item.Complement)
+                                                {
+                                                    <span class="badge bg-secondary ms-2" style="font-size: 0.70rem;">(Complemento)</span>
+                                                }
+                                                else
+                                                {
+                                                    <span class="badge bg-success ms-2" style="font-size: 0.70rem;"></span>
+                                                }
+                                            </td>
+                                            <td>
+                                                @if (item.Complement)
+                                                {
+                                                    <input type="number" name="AllChecklistItems[@i].Amount" value="@item.Amount" class="form-control form-control-sm" min="1" style="max-width: 100px;" @(item.IsSelected ? "" : "disabled") />
+                                                }
+                                                else
+                                                {
+                                                    <span class="text-muted">-</span>
+                                                    <input type="hidden" name="AllChecklistItems[@i].Amount" value="1" />
+                                                }
+                                            </td>
+                                            <td>
+                                                @if (item.Complement)
+                                                {
+                                                    <input type="text" name="AllChecklistItems[@i].DetailsValue" value="@item.DetailsValue" class="form-control form-control-sm" placeholder="Ej. Serie, marca..." @(item.IsSelected ? "" : "disabled") />
+                                                }
+                                                else
+                                                {
+                                                    <span class="text-dark">@(string.IsNullOrEmpty(item.DetailsValue) ? "-" : item.DetailsValue)</span>
+                                                    <input type="hidden" name="AllChecklistItems[@i].DetailsValue" value="@item.DetailsValue" />
+                                                }
+                                            </td>
+                                            <td class="text-center">
+                                                @if (item.Complement)
+                                                {
+                                                    <button type="button" class="btn btn-sm btn-outline-primary edit-catalog-btn"
+                                                            data-id="@item.DetailsId"
+                                                            data-name="@item.DetailName"
+                                                            data-complement="@item.Complement.ToString().ToLower()"
+                                                            title="Editar">
+                                                        ✏️
+                                                    </button>
+                                                    <button type="submit" asp-page-handler="DeleteCatalogItem" asp-route-detailId="@item.DetailsId"
+                                                            class="btn btn-sm btn-outline-danger"
+                                                            onclick="return confirm('¿Estás seguro de eliminar este elemento del catálogo?');"
+                                                            title="Eliminar">
+                                                        🗑️
+                                                    </button>
+                                                }
+                                                else
+                                                {
+                                                    <span class="text-muted">-</span>
+                                                }
+                                            </td>
+                                        </tr>
+                                    }
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <!-- Botón Guardar Asignación -->
+                    <div class="d-flex justify-content-between align-items-center mt-4">
+                        <a asp-page="./Index" class="btn btn-outline-secondary">← Volver al Panel</a>
+                        <button type="submit" asp-page-handler="SaveAssign" class="btn @(Model.IsAlreadyAssigned ? "btn-warning" : "btn-success") fw-bold">
+                            💾 @(Model.IsAlreadyAssigned ? "Modificar Asignación" : "Guardar Asignación")
+                        </button>
+                    </div>
+                </form>
+            }
+            else
+            {
+                <!-- ================= MODO DETALLES ================= -->
+
+                <div class="card bg-light border-0 p-4 mb-4 shadow-sm">
+                    <form method="post" asp-page-handler="RegisterCatalogItem">
+                        <input type="hidden" name="id" value="@Model.Id" />
+                        <input type="hidden" name="mode" value="details" />
+                        <h5 class="mb-3 text-success">➕ Agregar Nuevo Elemento al Catálogo</h5>
+                        <div class="row g-3 align-items-center">
+                            <div class="col-md-6">
+                                <input type="text" asp-for="NewCatalogDetailName" class="form-control" placeholder="Nombre (Ej. Procesador, Mouse)" required />
+                            </div>
+                            <div class="col-md-4">
+                                <div class="form-check mt-2">
+                                    <input type="checkbox" asp-for="NewCatalogIsComplement" class="form-check-input" id="isComplementCheck" />
+                                    <label class="form-check-label fw-bold small" for="isComplementCheck">¿Es un Complemento?</label>
+                                </div>
+                            </div>
+                            <div class="col-md-2 text-end">
+                                <button type="submit" class="btn btn-success w-100 fw-bold">
+                                    + Registrar
+                                </button>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+
+                <form method="post" asp-page-handler="ModifyDetails">
+                    <input type="hidden" name="id" value="@Model.Id" />
+                    <input type="hidden" name="mode" value="details" />
+
+                    <div class="card bg-light border-0 p-3 mb-4 shadow-sm">
+                        <div class="d-flex justify-content-between align-items-center mb-3">
+                            <h5 class="mb-0 text-secondary">📦 Lista de Componentes y Detalles (@Model.AllChecklistItems.Count)</h5>
+                        </div>
+                        <!-- Buscador antes de la tabla -->
+                        <div class="mb-3">
+                            <input type="text" id="searchFilter" class="form-control" placeholder="🔍 Buscar elemento..." />
+                        </div>
+                        <div class="table-responsive">
+                            <table class="table table-hover align-middle search-table">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th style="width: 12%;">Seleccionar</th>
+                                        <th style="width: 30%;">Elemento</th>
+                                        <th style="width: 12%;">Cantidad</th>
+                                        <th style="width: 34%;">Observaciones / Serie</th>
+                                        <th style="width: 12%;" class="text-center">Gestión Catálogo</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @{
+                                        var sortedDetailsItems = Model.AllChecklistItems.OrderBy(x => x.Complement).ToList();
+                                    }
+                                    @for (int i = 0; i < sortedDetailsItems.Count; i++)
+                                    {
+                                        var item = sortedDetailsItems[i];
+                                        <tr class="searchable-row">
+                                            <td>
+                                                <input type="hidden" name="AllChecklistItems[@i].DetailsId" value="@item.DetailsId" />
+                                                <input type="hidden" name="AllChecklistItems[@i].DetailName" value="@item.DetailName" />
+                                                <input type="hidden" name="AllChecklistItems[@i].Complement" value="@item.Complement.ToString().ToLower()" />
+
+                                                @if (!item.Complement)
+                                                {
+                                                    <input type="checkbox" name="AllChecklistItems[@i].IsSelected" value="true" class="form-check-input checklist-checkbox" @(item.IsSelected ? "checked" : "") />
+                                                }
+                                                else
+                                                {
+                                                    <span class="text-muted">-</span>
+                                                    <input type="hidden" name="AllChecklistItems[@i].IsSelected" value="false" />
+                                                }
+                                            </td>
+                                            <td>
+                                                <strong class="item-name">@item.DetailName</strong>
+                                                @if (!item.Complement)
+                                                {
+                                                    <span class="badge bg-success ms-2" style="font-size: 0.70rem;">(Principal)</span>
+                                                }
+                                            </td>
+                                            <td>
+                                                <span class="text-muted">-</span>
+                                                <input type="hidden" name="AllChecklistItems[@i].Amount" value="1" />
+                                            </td>
+                                            <td>
+                                                <input type="text" name="AllChecklistItems[@i].DetailsValue" value="@item.DetailsValue" class="form-control form-control-sm" placeholder="Ej. Ryzen 3, 8 GB..." @(!item.Complement && item.IsSelected ? "" : "disabled") />
+                                            </td>
+                                            <td class="text-center">
+                                                @if (!item.Complement)
+                                                {
+                                                    <button type="button" class="btn btn-sm btn-outline-primary edit-catalog-btn"
+                                                            data-id="@item.DetailsId"
+                                                            data-name="@item.DetailName"
+                                                            data-complement="@item.Complement.ToString().ToLower()"
+                                                            title="Editar">
+                                                        ✏️
+                                                    </button>
+                                                    <button type="submit" asp-page-handler="DeleteCatalogItem" asp-route-detailId="@item.DetailsId"
+                                                            class="btn btn-sm btn-outline-danger"
+                                                            onclick="return confirm('¿Estás seguro de eliminar este elemento del catálogo?');"
+                                                            title="Eliminar">
+                                                        🗑️
+                                                    </button>
+                                                }
+                                                else
+                                                {
+                                                    <span class="text-muted">-</span>
+                                                }
+                                            </td>
+                                        </tr>
+                                    }
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <div class="d-flex justify-content-between align-items-center mt-4">
+                        <a asp-page="./Index" class="btn btn-outline-secondary">← Volver al Panel</a>
+                        <button type="submit" class="btn btn-primary px-5 py-2 fw-bold shadow-sm">
+                            Modificar Detalles
+                        </button>
+                    </div>
+                </form>
+            }
+
+        </div>
+    </div>
+</div>
+
+<!-- MODAL PARA REGISTRAR / MODIFICAR PERSONAL -->
+@if (isAssignMode)
+{
+    <div class="modal fade" id="registerPersonModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <form method="post" id="personFormModal" asp-page-handler="RegisterPerson">
+                    <input type="hidden" name="id" value="@Model.Id" />
+                    <input type="hidden" name="mode" value="assign" />
+                    <input type="hidden" id="ModalPersonId" name="ModalPersonId" />
+
+                    <div class="modal-header bg-success text-white">
+                        <h5 class="modal-title" id="personModalTitle">Registrar Nueva Persona</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body">
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">Apellido / Nombre</label>
+                            <input type="text" asp-for="ModalNewPersonLastName" id="ModalNewPersonLastName" class="form-control" placeholder="Ej. Pérez" required />
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">Identificación (CI)</label>
+                            <input type="text" asp-for="ModalNewPersonIdentification" id="ModalNewPersonIdentification" class="form-control" placeholder="Ej. 1234567" required />
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">Número / Teléfono</label>
+                            <input type="text" asp-for="ModalNewPersonNumbers" id="ModalNewPersonNumbers" class="form-control" placeholder="Ej. 70000000" />
+                        </div>
+                        <div class="form-check mb-3">
+                            <input type="checkbox" asp-for="ModalNewPersonIsActive" id="ModalNewPersonIsActive" class="form-check-input" checked />
+                            <label class="form-check-label fw-bold" for="ModalNewPersonIsActive">Personal Activo</label>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                        <button type="submit" id="personModalSubmitBtn" class="btn btn-success">Guardar y Seleccionar</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+}
+
+@section Scripts {
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            const personInput = document.getElementById('selectedPersonInput');
+            const personIdInput = document.getElementById('SelectedPersonId');
+            const datalist = document.getElementById('personsOptions');
+            const btnPersonAction = document.getElementById('btnPersonAction');
+
+            const personFormModal = document.getElementById('personFormModal');
+            const personModalTitle = document.getElementById('personModalTitle');
+            const modalPersonId = document.getElementById('ModalPersonId');
+            const modalLastName = document.getElementById('ModalNewPersonLastName');
+            const modalIdentification = document.getElementById('ModalNewPersonIdentification');
+            const modalNumbers = document.getElementById('ModalNewPersonNumbers');
+            const modalActive = document.getElementById('ModalNewPersonIsActive');
+
+            function updatePersonButtonState() {
+                if (!personInput) return;
+                const selectedVal = personInput.value.trim();
+                let foundOption = null;
+
+                if (datalist) {
+                    for (let opt of datalist.options) {
+                        if (opt.value === selectedVal) {
+                            foundOption = opt;
+                            break;
+                        }
+                    }
+                }
+
+                if (foundOption) {
+                    personIdInput.value = foundOption.getAttribute('data-id');
+                    if(btnPersonAction) {
+                        btnPersonAction.innerHTML = "✏️ Modificar Persona";
+                        btnPersonAction.className = "btn btn-outline-primary fw-bold text-nowrap";
+                    }
+
+                    if(personModalTitle) personModalTitle.textContent = "Modificar Persona Seleccionada";
+                    if(modalPersonId) modalPersonId.value = foundOption.getAttribute('data-id');
+                    if(modalLastName) modalLastName.value = foundOption.getAttribute('data-lastname');
+                    if(modalIdentification) modalIdentification.value = foundOption.getAttribute('data-identification');
+                    if(modalNumbers) modalNumbers.value = foundOption.getAttribute('data-numbers') || '';
+                    if(modalActive) modalActive.checked = foundOption.getAttribute('data-active') === 'True';
+                    if(personFormModal) personFormModal.setAttribute('asp-page-handler', 'EditPerson');
+                } else {
+                    personIdInput.value = '';
+                    if(btnPersonAction) {
+                        btnPersonAction.innerHTML = "➕ Nueva";
+                        btnPersonAction.className = "btn btn-outline-success fw-bold text-nowrap";
+                    }
+
+                    if(personModalTitle) personModalTitle.textContent = "Registrar Nueva Persona";
+                    if(modalPersonId) modalPersonId.value = '';
+                    if(modalLastName) modalLastName.value = '';
+                    if(modalIdentification) modalIdentification.value = '';
+                    if(modalNumbers) modalNumbers.value = '';
+                    if(modalActive) modalActive.checked = true;
+                    if(personFormModal) personFormModal.setAttribute('asp-page-handler', 'RegisterPerson');
+                }
+            }
+
+            if (personInput) {
+                personInput.addEventListener('input', updatePersonButtonState);
+                personInput.addEventListener('change', updatePersonButtonState);
+            }
+
+            if (btnPersonAction) {
+                btnPersonAction.addEventListener('click', function() {
+                    updatePersonButtonState();
+                });
+            }
+
+            // Filtro de búsqueda en tabla (Modo Asignación)
+            const searchFilterAssign = document.getElementById('searchFilterAssign');
+            if (searchFilterAssign) {
+                searchFilterAssign.addEventListener('keyup', function() {
+                    const query = this.value.toLowerCase();
+                    document.querySelectorAll('.searchable-row-assign').forEach(row => {
+                        const name = row.querySelector('.item-name-assign').textContent.toLowerCase();
+                        row.style.display = name.includes(query) ? '' : 'none';
+                    });
+                });
+            }
+
+            // Filtro de búsqueda en tabla (Modo Detalles)
+            const searchFilter = document.getElementById('searchFilter');
+            if (searchFilter) {
+                searchFilter.addEventListener('keyup', function() {
+                    const query = this.value.toLowerCase();
+                    document.querySelectorAll('.searchable-row').forEach(row => {
+                        const name = row.querySelector('.item-name').textContent.toLowerCase();
+                        row.style.display = name.includes(query) ? '' : 'none';
+                    });
+                });
+            }
+
+            // Habilitar / deshabilitar campos según el checkbox del checklist
+            document.querySelectorAll('.checklist-checkbox').forEach(checkbox => {
+                checkbox.addEventListener('change', function() {
+                    const row = this.closest('tr');
+                    const inputs = row.querySelectorAll('input[type="number"], input[type="text"]');
+                    inputs.forEach(input => {
+                        if (!input.classList.contains('form-check-input')) {
+                            input.disabled = !this.checked;
+                        }
+                    });
+                });
+            });
+        });
+    </script>
+}

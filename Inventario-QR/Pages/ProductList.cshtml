@@ -1,0 +1,132 @@
+﻿@page
+@model Inventario_QR.Pages.ProductList
+@{
+    ViewData["Title"] = "Lista de Inventario General";
+}
+
+<div class="container-fluid mt-3">
+    <!-- Encabezado y Botones de Navegación Superiores -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2 class="fw-bold text-dark mb-1">Lista de Inventario General</h2>
+            <p class="text-muted small mb-0">Revisión de productos con características, complementos y casillas de control.</p>
+        </div>
+        <div class="d-flex gap-2 d-print-none">
+            <a asp-page="/ProductList" class="btn btn-primary btn-sm shadow-sm">📋 Lista General</a>
+            <a asp-page="/ProductAssignmentModel" class="btn btn-outline-secondary btn-sm shadow-sm">👤 Lista con Asignación</a>
+            <button onclick="window.print();" class="btn btn-success btn-sm shadow-sm">📥 Descargar / Imprimir</button>
+            <a asp-page="./Index" class="btn btn-outline-dark btn-sm shadow-sm">&larr; Volver al Panel</a>
+        </div>
+    </div>
+
+    <!-- Barra de Filtro por Departamento (Limpia y profesional) -->
+    <form method="get" class="row g-3 mb-4 align-items-center d-print-none bg-light p-3 rounded-3 shadow-sm">
+        <div class="col-auto">
+            <label for="SelectedDepartment" class="col-form-label fw-bold small text-secondary">Filtrar por Departamento:</label>
+        </div>
+        <div class="col-auto">
+            <select name="SelectedDepartment" class="form-select form-select-sm shadow-sm" onchange="this.form.submit()">
+                <option value="">-- Todos los Departamentos --</option>
+                @foreach (var dept in Model.Departments)
+                {
+                    <option value="@dept" selected="@(Model.SelectedDepartment == dept ? "selected" : null)">@dept</option>
+                }
+            </select>
+        </div>
+    </form>
+
+    <!-- Tabla de Inventario General -->
+    <div class="card shadow-sm border-0 rounded-3">
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-bordered table-hover align-middle mb-0">
+                    <thead class="table-light text-uppercase fs-7 text-secondary text-center">
+                        <tr>
+                            <th class="py-3" style="width: 60px;">Nro</th>
+                            <th class="py-3" style="width: 140px;">Código</th>
+                            <th class="py-3" style="width: 200px;">Producto</th>
+                            <th class="py-3">Elemento (Bloque Principal / Accesorios)</th>
+                            <th class="py-3" style="width: 110px;">Cant. Obtenida</th>
+                            <th class="py-3" style="width: 260px;">Check / Motivo u Observación</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @if (Model.InventoryList != null && Model.InventoryList.Any())
+                        {
+                            @foreach (var item in Model.InventoryList)
+                            {
+                                <tr>
+                                    <td class="text-center fw-bold text-secondary">@item.RowNumber</td>
+                                    <td><strong class="text-primary">@item.Code</strong></td>
+                                    <td class="fw-medium text-dark">@item.ProductName</td>
+                                    <td>
+                                        <div class="p-2">
+                                            <!-- SECCIÓN 1: BLOQUE PRINCIPAL (Características) -->
+                                            @if (item.Characteristics.Any())
+                                            {
+                                                <div class="d-flex align-items-center justify-content-between bg-light p-2 rounded mb-2 border">
+                                                    <div class="fw-bold text-dark small">
+                                                        🖥️ Bloque Principal:
+                                                    </div>
+                                                    <span class="badge bg-secondary text-white px-2">Cantidad: 1</span>
+                                                </div>
+                                                <ul class="list-unstyled ps-3 mb-2 small text-muted">
+                                                    @foreach (var ch in item.Characteristics)
+                                                    {
+                                                        <li class="py-1 border-bottom border-light d-flex justify-content-between align-items-center">
+                                                            <span>• @ch.DetailName</span>
+                                                            <span class="badge bg-light text-dark border px-2">Cant: @ch.Amount</span>
+                                                        </li>
+                                                    }
+                                                </ul>
+                                            }
+
+                                            <!-- SECCIÓN 2: COMPLEMENTOS / ACCESORIOS -->
+                                            @if (item.Complements.Any())
+                                            {
+                                                @foreach (var comp in item.Complements)
+                                                {
+                                                    <div class="d-flex align-items-center justify-content-between py-1 border-bottom border-light small">
+                                                        <span class="text-dark">• @comp.DetailName</span>
+                                                        <span class="badge bg-light text-dark border px-2">Cantidad: @comp.Amount</span>
+                                                    </div>
+                                                }
+                                            }
+
+                                            <!-- Si no hay elementos -->
+                                            @if (!item.Characteristics.Any() && !item.Complements.Any())
+                                            {
+                                                <span class="text-muted small fst-italic">Sin elementos registrados.</span>
+                                            }
+                                        </div>
+                                    </td>
+                                    <!-- Cantidad Obtenida -->
+                                    <td class="text-center">
+                                        <input type="number" class="form-control form-control-sm text-center shadow-sm" value="1" min="0" />
+                                    </td>
+                                    <!-- Observación y Check -->
+                                    <td>
+                                        <div class="input-group input-group-sm shadow-sm">
+                                            <input type="text" class="form-control" placeholder="Observación..." />
+                                            <div class="input-group-text bg-white">
+                                                <input class="form-check-input mt-0" type="checkbox" aria-label="Checkbox de verificación" />
+                                            </div>
+                                        </div>
+                                    </td>
+                                </tr>
+                            }
+                        }
+                        else
+                        {
+                            <tr>
+                                <td colspan="6" class="text-center py-5 text-muted">
+                                    <p class="mb-0">No hay productos registrados con los filtros seleccionados.</p>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>

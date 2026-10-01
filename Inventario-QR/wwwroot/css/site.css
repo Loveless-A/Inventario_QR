@@ -1,0 +1,147 @@
+html {
+    font-size: 14px;
+}
+
+@media (min-width: 768px) {
+    html {
+        font-size: 16px;
+    }
+}
+
+.btn:focus, .btn:active:focus, .btn-link.nav-link:focus, .form-control:focus, .form-check-input:focus {
+    box-shadow: 0 0 0 0.1rem white, 0 0 0 0.25rem #258cfb;
+}
+
+html {
+    position: relative;
+    min-height: 100%;
+}
+
+body {
+    margin-bottom: 60px;
+}
+
+/* --- Estilos para vista previa e impresión de etiquetas QR (3x3 cm) --- */
+.labels-container {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.qr-label-card {
+    width: 3cm;
+    height: 3cm;
+    padding: 3px;
+    border: 1px dashed #bbb;
+    box-sizing: border-box;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: space-between;
+    text-align: center;
+    background: white;
+    page-break-inside: avoid;
+    overflow: hidden;
+}
+
+.product-name {
+    font-size: 7.5px;
+    font-weight: bold;
+    line-height: 1;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 100%;
+    color: #000;
+}
+
+.product-code {
+    font-size: 7px;
+    font-weight: 600;
+    color: #333;
+    line-height: 1;
+}
+
+.qr-img {
+    width: 1.7cm;
+    height: 1.7cm;
+    object-fit: contain;
+}
+
+.qr-text {
+    font-size: 6px;
+    color: #555;
+    line-height: 1;
+}
+
+/* --- Corrección para Tablas Responsivas y Scroll Horizontal --- */
+.table-responsive {
+    width: 100%;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+}
+
+    .table-responsive table {
+        min-width: 700px;
+    }
+
+@media print {
+    header, nav, footer, .navbar, .border-bottom, .no-print, .btn, .d-flex.gap-2, a, .mb-4:has(.btn) {
+        display: none !important;
+    }
+
+    body {
+        margin: 0;
+        background: white !important;
+        color: #000 !important;
+        font-size: 10pt !important;
+        -webkit-print-color-adjust: exact;
+    }
+
+    .container-fluid {
+        width: 100% !important;
+        padding: 0 !important;
+        margin: 0 !important;
+    }
+
+    .card, .card-body {
+        border: none !important;
+        box-shadow: none !important;
+        padding: 0 !important;
+    }
+
+    .table-responsive {
+        overflow: visible !important;
+    }
+
+    .table {
+        width: 100% !important;
+        border-collapse: collapse !important;
+    }
+
+        .table th, .table td {
+            padding: 4px 5px !important;
+            font-size: 9pt !important;
+        }
+
+    tr {
+        page-break-inside: avoid !important;
+    }
+
+    .labels-container {
+        gap: 0;
+    }
+
+    .qr-label-card {
+        border: none;
+    }
+}
+
+@media (max-width: 767.98px) {
+    /* Hace que los botones se adapten mejor al ancho en celulares */
+    .d-flex.flex-wrap.gap-2 .btn {
+        flex: 1 1 auto;
+        font-size: 0.75rem;
+        padding: 0.35rem 0.5rem;
+    }
+}

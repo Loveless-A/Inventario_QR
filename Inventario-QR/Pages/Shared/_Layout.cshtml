@@ -1,0 +1,75 @@
+﻿<!DOCTYPE html>
+<html lang="es" class="h-100">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>@ViewData["Title"] - Inventario_QR</title>
+    <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
+    <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
+</head>
+<body class="d-flex flex-column h-100 bg-light">
+    <header>
+        <nav class="navbar navbar-expand-sm navbar-light bg-white border-bottom box-shadow py-3 mb-4">
+            <div class="container-fluid px-4">
+                <a class="navbar-brand fw-bold text-primary" asp-area="" asp-page="/Index">Inventario_QR</a>
+                <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target=".navbar-collapse" aria-controls="navbarSupportedContent"
+                        aria-expanded="false" aria-label="Toggle navigation">
+                    <span class="navbar-toggler-icon"></span>
+                </button>
+                <div class="navbar-collapse collapse d-sm-inline-flex justify-content-between">
+
+                    <!-- MENU PRINCIPAL: Solo se muestra si el usuario está autenticado -->
+                    @if (User.Identity != null && User.Identity.IsAuthenticated)
+                    {
+                        <ul class="navbar-nav flex-grow-1 ms-3">
+                            <li class="nav-item">
+                                <a class="nav-link text-dark" asp-area="" asp-page="/Index">Inicio</a>
+                            </li>
+                            <li class="nav-item">
+                                <a class="nav-link text-dark" asp-area="" asp-page="/ProductList">Ver Productos</a>
+                            </li>
+                        </ul>
+                    }
+                    else
+                    {
+                        <div class="flex-grow-1"></div>
+                    }
+
+                    <!-- USUARIO Y BOTÓN DE CERRAR SESIÓN -->
+                    <ul class="navbar-nav ms-auto align-items-center">
+                        @if (User.Identity != null && User.Identity.IsAuthenticated)
+                        {
+                            <li class="nav-item me-3">
+                                <span class="badge bg-secondary px-3 py-2 text-white">@User.Identity.Name</span>
+                            </li>
+                            <li class="nav-item">
+                                <form method="post" asp-page="/Login" asp-page-handler="Logout" class="m-0">
+                                    <button type="submit" class="btn btn-outline-danger btn-sm">Cerrar Sesión</button>
+                                </form>
+                            </li>
+                        }
+                    </ul>
+                </div>
+            </div>
+        </nav>
+    </header>
+
+    <main role="main" class="flex-shrink-0 mb-5">
+        <div class="container-fluid px-4">
+            @RenderBody()
+        </div>
+    </main>
+
+    <footer class="footer mt-auto py-3 bg-white border-top text-muted text-center">
+        <div class="container">
+            <small>&copy; 2026 - Inventario_QR - <a asp-area="" asp-page="/Privacy" class="text-decoration-none">Privacidad</a></small>
+        </div>
+    </footer>
+
+    <script src="~/lib/jquery/dist/jquery.min.js"></script>
+    <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="~/js/site.js" asp-append-version="true"></script>
+
+    @await RenderSectionAsync("Scripts", required: false)
+</body>
+</html>
