@@ -35,8 +35,10 @@
                         <p class="mb-1"><strong>QR ID:</strong> <code id="qr-text">@Model.Product.Qr</code></p>
                     </div>
                     <div class="col-5 text-center">
-                        <!-- Contenedor donde se generará automáticamente el QR -->
-                        <div id="qrcode" class="p-2 bg-light border rounded d-inline-block shadow-sm"></div>
+                        <!-- QR generado en el servidor -->
+                        <div id="qrcode" class="p-2 bg-light border rounded d-inline-block shadow-sm">
+                            <img src="@Model.QrImage" alt="Codigo QR del activo" width="95" height="95" />
+                        </div>
                         <small class="d-block text-muted mt-1" style="font-size: 10px;">Escanee para ver detalles</small>
                     </div>
                 </div>
@@ -128,23 +130,3 @@
         </div>
     </div>
 </div>
-
-@section Scripts {
-    <!-- Librería externa para generar códigos QR dinámicamente en el navegador -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
-    <script>
-        document.addEventListener("DOMContentLoaded", function () {
-            var currentUrl = window.location.href;
-            document.getElementById("qrcode").innerHTML = "";
-
-            new QRCode(document.getElementById("qrcode"), {
-                text: currentUrl,
-                width: 95,
-                height: 95,
-                colorDark: "#000000",
-                colorLight: "#ffffff",
-                correctLevel: QRCode.CorrectLevel.M
-            });
-        });
-    </script>
-}

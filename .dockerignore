@@ -1,0 +1,28 @@
+# Artefactos de compilacion de .NET
+**/bin/
+**/obj/
+
+# Herramientas de IDE / Visual Studio
+**/.vs/
+**/.vscode/
+**/*.user
+**/*.suo
+**/*.userprefs
+
+# Git
+.git/
+.gitignore
+.gitattributes
+
+# Docker
+**/Dockerfile*
+**/docker-compose*.yml
+**/.dockerignore
+
+# Sistema
+**/.DS_Store
+**/Thumbs.db
+
+# Configuracion local con secretos
+**/.env
+**/.env.local

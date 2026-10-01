@@ -21,7 +21,7 @@
                 <div class="qr-label-card">
                     <div class="product-name">@item.ProductName</div>
                     <div class="product-code">@item.Code</div>
-                    <img src="https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=@Uri.EscapeDataString(item.TargetUrl)" alt="QR" class="qr-img" />
+                    <img src="@item.QrImage" alt="QR" class="qr-img" />
                     <div class="qr-text">@item.Qr</div>
                 </div>
             }

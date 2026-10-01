@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using Inventario_QR.Data;
+using Inventario_QR.Helpers;
 using Inventario_QR.Models;
 using Microsoft.EntityFrameworkCore;
 using System.Collections.Generic;
@@ -26,6 +27,7 @@ namespace Inventario_QR.Pages
             public string ProductName { get; set; } = string.Empty;
             public string Qr { get; set; } = string.Empty;
             public string TargetUrl { get; set; } = string.Empty;
+            public string QrImage { get; set; } = string.Empty;
         }
 
         public IList<PrintProductVm> Products { get; set; } = new List<PrintProductVm>();
@@ -54,7 +56,8 @@ namespace Inventario_QR.Pages
                 Code = p.Code ?? string.Empty,
                 ProductName = p.ProductName ?? string.Empty,
                 Qr = p.Qr ?? string.Empty,
-                TargetUrl = $"{baseUrl}/Visualizations/{p.Id}"
+                TargetUrl = $"{baseUrl}/Visualizations/{p.Id}",
+                QrImage = QrGenerator.ToSvgDataUri($"{baseUrl}/Visualizations/{p.Id}")
             }).ToList();
 
             return Page();

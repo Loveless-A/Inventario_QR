@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using Inventario_QR.Data;
+using Inventario_QR.Helpers;
 using Inventario_QR.Models;
 using Microsoft.EntityFrameworkCore;
 using System;
@@ -54,6 +55,7 @@ namespace Inventario_QR.Pages
         public ProductInfo Product { get; set; } = new();
         public CharacteristicInfo Characteristic { get; set; } = new();
         public List<ChecklistDetailItem> Items { get; set; } = new();
+        public string QrImage { get; set; } = string.Empty;
 
         public async Task<IActionResult> OnGetAsync()
         {
@@ -96,7 +98,12 @@ namespace Inventario_QR.Pages
                 };
             }
 
-            // 3. Obtener componentes y detalles asociados al producto desde product_details
+            // 3. Generar el QR de esta misma pagina en el servidor (antes lo hacia
+            //    una libreria JS cargada desde un CDN, que requeria internet).
+            QrImage = QrGenerator.ToSvgDataUri(
+                $"{Request.Scheme}://{Request.Host}/Visualizations/{Id}", 4);
+
+            // 4. Obtener componentes y detalles asociados al producto desde product_details
             var productDetailsList = await _context.ProductDetails
                 .Include(pd => pd.Detail)
                 .Where(pd => pd.ProductId == Id)

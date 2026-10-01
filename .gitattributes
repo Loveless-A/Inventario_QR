@@ -1,0 +1,32 @@
+# Normalizacion de fines de linea: evita que CRLF/LF generen diffs falsos
+# entre el equipo de Windows y el build de Linux dentro del contenedor.
+* text=auto
+
+*.cs        text
+*.cshtml    text
+*.css       text
+*.js        text
+*.json      text
+*.sql       text
+*.yml       text
+*.md        text
+*.csproj    text
+*.sln       text
+*.props     text
+*.targets   text
+
+Dockerfile        text
+.dockerignore     text
+.gitignore        text
+.gitattributes    text
+.env.example      text
+
+# Artefactos que nunca deben normalizarse
+*.dll    binary
+*.exe    binary
+*.pdb    binary
+*.ico    binary
+*.png    binary
+*.jpg    binary
+*.zip    binary
+*.nupkg  binary

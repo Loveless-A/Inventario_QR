@@ -1,0 +1,62 @@
+name: inventario-qr
+
+services:
+  db:
+    image: postgres:16-alpine
+    container_name: inventario-qr-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-inventario_db}
+      POSTGRES_USER: ${POSTGRES_USER:-inventario}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?define POSTGRES_PASSWORD en el archivo .env}
+      PGDATA: /var/lib/postgresql/data/pgdata
+      TZ: UTC
+    ports:
+      - "5445:5432"
+    volumes:
+      - db-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-inventario} -d ${POSTGRES_DB:-inventario_db}"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 20s
+    networks:
+      - inventario-net
+
+  web:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: inventario-qr-app:latest
+    container_name: inventario-qr-web
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      ASPNETCORE_ENVIRONMENT: Production
+      ASPNETCORE_HTTP_PORTS: 8080
+      # Si CONNECTION_STRING esta definida en .env se usa tal cual; si no,
+      # se arma una contra el contenedor 'db' (nunca contra localhost).
+      ConnectionStrings__DefaultConnection: "${CONNECTION_STRING:-Host=db;Port=5432;Database=${POSTGRES_DB:-inventario_db};Username=${POSTGRES_USER:-inventario};Password=${POSTGRES_PASSWORD:?define POSTGRES_PASSWORD en el archivo .env}}"
+      Database__ApplyMigrationsOnStartup: "true"
+      Database__RetryAttempts: "15"
+      Database__RetryDelaySeconds: "5"
+      HttpsRedirection__Enabled: "false"
+      DataProtection__KeysPath: /var/lib/inventario-qr/keys
+      TZ: UTC
+    ports:
+      - "85:8080"
+    volumes:
+      - dataprotection-keys:/var/lib/inventario-qr
+    networks:
+      - inventario-net
+
+volumes:
+  db-data:
+  dataprotection-keys:
+
+networks:
+  inventario-net:
+    driver: bridge
