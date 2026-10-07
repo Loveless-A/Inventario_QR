@@ -10,11 +10,28 @@
             <h3 class="mb-4">Registrar Nuevo Producto</h3>
 
             <form method="post">
-                <div asp-validation-summary="ModelOnly" class="text-danger mb-3"></div>
+                @Html.AntiForgeryToken()
+                <!-- Muestra un resumen general de errores si ModelState falla -->
+                <div asp-validation-summary="All" class="text-danger mb-3"></div>
 
+                <!-- SELECT CATEGORÍA -->
+                <div class="mb-3">
+                    <label asp-for="Product.CategoryId" class="form-label">Categoría</label>
+                    <div class="input-group">
+                        <select id="categorySelect" asp-for="Product.CategoryId" asp-items="Model.CategoriesSL" class="form-select" required>
+                            <option value="">-- Seleccionar Categoría --</option>
+                        </select>
+                        <button type="button" id="btnCategoryModal" class="btn btn-outline-primary" data-bs-toggle="modal" data-bs-target="#modalCategory">
+                            + Nueva
+                        </button>
+                    </div>
+                    <span asp-validation-for="Product.CategoryId" class="text-danger"></span>
+                </div>
+
+                <!-- CÓDIGO DE INVENTARIO -->
                 <div class="mb-3">
                     <label asp-for="Product.Code" class="form-label">Código de Inventario</label>
-                    <input asp-for="Product.Code" class="form-control" placeholder="Ej. LAP-001" required />
+                    <input id="productCode" asp-for="Product.Code" class="form-control" placeholder="Ej. LAP-001" required />
                     <span asp-validation-for="Product.Code" class="text-danger"></span>
                 </div>
 
@@ -31,7 +48,7 @@
                 </div>
 
                 <div class="mb-3 form-check">
-                    <input asp-for="Product.Active" class="form-check-input" checked />
+                    <input asp-for="Product.Active" class="form-check-input" />
                     <label asp-for="Product.Active" class="form-check-label">Producto Activo</label>
                 </div>
 
@@ -43,3 +60,170 @@
         </div>
     </div>
 </div>
+
+<!-- MODAL HÍBRIDO (CREAR / EDITAR CATEGORÍA) -->
+<div class="modal fade" id="modalCategory" tabindex="-1" aria-labelledby="modalCategoryTitle" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="modalCategoryTitle">Nueva Categoría</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+            </div>
+            <div class="modal-body">
+                <div id="modalAlert" class="alert alert-danger d-none" role="alert"></div>
+
+                <input type="hidden" id="catId" value="0" />
+
+                <div class="mb-3">
+                    <label for="catName" class="form-label">Nombre de Categoría</label>
+                    <input type="text" id="catName" class="form-control" placeholder="Ej. Computadoras, Sillas, Muebles" />
+                </div>
+                <div class="mb-3">
+                    <label for="catAbbr" class="form-label">Abreviatura (para el código)</label>
+                    <input type="text" id="catAbbr" class="form-control" placeholder="Ej. COMP, SIL, MUE" maxlength="5" style="text-transform:uppercase;" />
+                </div>
+                <div class="mb-3">
+                    <label for="catComment" class="form-label">Comentario (Opcional)</label>
+                    <textarea id="catComment" class="form-control" rows="2"></textarea>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Cancelar</button>
+                <button type="button" id="btnSaveCategory" class="btn btn-primary btn-sm">Guardar Categoría</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            const categorySelect = document.getElementById('categorySelect');
+            const productCode = document.getElementById('productCode');
+            const btnCategoryModal = document.getElementById('btnCategoryModal');
+
+            const initialCategories = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.CategoryList));
+
+            const categoryStore = {};
+            initialCategories.forEach(cat => {
+                categoryStore[cat.Id] = {
+                    name: cat.CategoryName,
+                    abbr: cat.Abbreviation,
+                    comment: cat.Comment || ''
+                };
+            });
+
+            categorySelect.addEventListener('change', function () {
+                const selectedId = categorySelect.value;
+
+                if (selectedId && categoryStore[selectedId]) {
+                    btnCategoryModal.textContent = "✏️ Editar";
+                    btnCategoryModal.classList.replace("btn-outline-primary", "btn-outline-warning");
+                    updateCodePrefix(categoryStore[selectedId].abbr);
+                } else {
+                    btnCategoryModal.textContent = "+ Nueva";
+                    btnCategoryModal.classList.replace("btn-outline-warning", "btn-outline-primary");
+                }
+            });
+
+            btnCategoryModal.addEventListener('click', function () {
+                const selectedId = categorySelect.value;
+                const alertDiv = document.getElementById('modalAlert');
+                alertDiv.classList.add('d-none');
+
+                if (selectedId && categoryStore[selectedId]) {
+                    document.getElementById('modalCategoryTitle').textContent = "Editar Categoría";
+                    document.getElementById('catId').value = selectedId;
+                    document.getElementById('catName').value = categoryStore[selectedId].name;
+                    document.getElementById('catAbbr').value = categoryStore[selectedId].abbr;
+                    document.getElementById('catComment').value = categoryStore[selectedId].comment || '';
+                } else {
+                    document.getElementById('modalCategoryTitle').textContent = "Nueva Categoría";
+                    document.getElementById('catId').value = "0";
+                    document.getElementById('catName').value = "";
+                    document.getElementById('catAbbr').value = "";
+                    document.getElementById('catComment').value = "";
+                }
+            });
+
+            function updateCodePrefix(prefix) {
+                const parts = productCode.value.split('-');
+                if (parts.length > 1) {
+                    productCode.value = prefix + '-' + parts.slice(1).join('-');
+                } else {
+                    productCode.value = prefix + '-' + productCode.value;
+                }
+            }
+
+            document.getElementById('btnSaveCategory').addEventListener('click', async function () {
+                const id = parseInt(document.getElementById('catId').value);
+                const name = document.getElementById('catName').value.trim();
+                const abbr = document.getElementById('catAbbr').value.trim();
+                const comment = document.getElementById('catComment').value.trim();
+                const alertDiv = document.getElementById('modalAlert');
+
+                if (!name || !abbr) {
+                    alertDiv.textContent = 'Por favor complete el nombre y la abreviatura.';
+                    alertDiv.classList.remove('d-none');
+                    return;
+                }
+
+                alertDiv.classList.add('d-none');
+                const handlerUrl = id > 0 ? '?handler=UpdateCategory' : '?handler=CreateCategory';
+
+                try {
+                    const response = await fetch(handlerUrl, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({
+                            Id: id,
+                            CategoryName: name,
+                            Abbreviation: abbr,
+                            Comment: comment
+                        })
+                    });
+
+                    if (response.ok) {
+                        const data = await response.json();
+
+                        categoryStore[data.id] = {
+                            name: data.name,
+                            abbr: data.abbreviation,
+                            comment: data.comment
+                        };
+
+                        if (id > 0) {
+                            const opt = categorySelect.querySelector(`option[value="${id}"]`);
+                            if (opt) {
+                                opt.text = `${data.name} (${data.abbreviation})`;
+                            }
+                        } else {
+                            const option = new Option(`${data.name} (${data.abbreviation})`, data.id);
+                            categorySelect.add(option, undefined);
+                            categorySelect.value = data.id;
+
+                            btnCategoryModal.textContent = "✏️ Editar";
+                            btnCategoryModal.classList.replace("btn-outline-primary", "btn-outline-warning");
+                        }
+
+                        updateCodePrefix(data.abbreviation);
+
+                        const modalElement = document.getElementById('modalCategory');
+                        const modalInstance = bootstrap.Modal.getInstance(modalElement);
+                        modalInstance.hide();
+                    } else {
+                        const err = await response.json();
+                        alertDiv.textContent = err.message || 'Error al procesar la categoría.';
+                        alertDiv.classList.remove('d-none');
+                    }
+                } catch (error) {
+                    alertDiv.textContent = 'Ocurrió un error de conexión.';
+                    alertDiv.classList.remove('d-none');
+                }
+            });
+        });
+    </script>
+}

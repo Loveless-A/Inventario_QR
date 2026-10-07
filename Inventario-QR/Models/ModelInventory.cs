@@ -1,10 +1,66 @@
 ﻿using System;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
-using Microsoft.EntityFrameworkCore; // <-- Necesario para los índices únicos
+using Microsoft.EntityFrameworkCore;
 
 namespace Inventario_QR.Models
 {
+    // ==========================================
+    // NUEVAS TABLAS MAESTRAS
+    // ==========================================
+
+    [Table("positions")]
+    public class Position
+    {
+        [Key]
+        [Column("id")]
+        public int Id { get; set; }
+
+        [Column("position")]
+        public string PositionName { get; set; }
+
+        [Column("active")]
+        public bool Active { get; set; } = true;
+    }
+
+    [Table("dependences")]
+    public class Dependence
+    {
+        [Key]
+        [Column("id")]
+        public int Id { get; set; }
+
+        [Column("dependence")]
+        public string DependenceName { get; set; }
+
+        [Column("active")]
+        public bool Active { get; set; } = true;
+    }
+
+    [Table("categories")]
+    public class Category
+    {
+        [Key]
+        [Column("id")]
+        public int Id { get; set; }
+
+        [Column("category")]
+        public string CategoryName { get; set; }
+
+        [Column("abbreviation")]
+        public string Abbreviation { get; set; }
+
+        [Column("comment")]
+        public string Comment { get; set; }
+
+        [Column("active")]
+        public bool Active { get; set; } = true;
+    }
+
+    // ==========================================
+    // ENTIDADES PRINCIPALES Y SUS RELACIONES
+    // ==========================================
+
     [Table("persons")]
     public class Person
     {
@@ -22,7 +78,21 @@ namespace Inventario_QR.Models
         public string Numbers { get; set; }
 
         [Column("active")]
-        public bool Active { get; set; }
+        public bool Active { get; set; } = true;
+
+        // --- Relación con Cargo (Position) ---
+        [Column("position_id")]
+        public int? PositionId { get; set; }
+
+        [ForeignKey("PositionId")]
+        public Position Position { get; set; }
+
+        // --- Relación con Área/Dependencia (Dependence) ---
+        [Column("dependence_id")]
+        public int? DependenceId { get; set; }
+
+        [ForeignKey("DependenceId")]
+        public Dependence Dependence { get; set; }
     }
 
     [Table("access")]
@@ -49,8 +119,8 @@ namespace Inventario_QR.Models
     }
 
     [Table("product")]
-    [Index(nameof(Code), IsUnique = true)] // <-- Asegura que el código sea único en PostgreSQL
-    [Index(nameof(Qr), IsUnique = true)]   // <-- Asegura que el QR sea único en PostgreSQL
+    [Index(nameof(Code), IsUnique = true)]
+    [Index(nameof(Qr), IsUnique = true)]
     public class Product
     {
         [Key]
@@ -68,6 +138,13 @@ namespace Inventario_QR.Models
 
         [Column("active")]
         public bool Active { get; set; } = true;
+
+        // --- Relación con Categoría (Category) ---
+        [Column("category_id")]
+        public int? CategoryId { get; set; }
+
+        [ForeignKey("CategoryId")]
+        public Category Category { get; set; }
     }
 
     [Table("characteristics")]
@@ -99,7 +176,7 @@ namespace Inventario_QR.Models
         public bool Active { get; set; } = true;
 
         [Column("coment")]
-        public string Coment { get; set; } // Memoria de entrega o devolución
+        public string Coment { get; set; }
     }
 
     [Table("details")]

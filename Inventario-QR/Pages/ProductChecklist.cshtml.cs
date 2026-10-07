@@ -1,12 +1,12 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Threading.Tasks;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
+using Microsoft.EntityFrameworkCore;
 using Inventario_QR.Data;
 using Inventario_QR.Models;
-using Microsoft.EntityFrameworkCore;
-using System.Collections.Generic;
-using System.Threading.Tasks;
-using System.Linq;
-using System;
 
 namespace Inventario_QR.Pages
 {
@@ -23,250 +23,347 @@ namespace Inventario_QR.Pages
         public int Id { get; set; }
 
         [BindProperty(SupportsGet = true)]
-        public string? Mode { get; set; } // "assign" o "details"
+        public string Mode { get; set; } // "assign" o "details"
 
-        public Product Product { get; set; } = default!;
+        public Product Product { get; set; }
+        public List<Person> AllPersons { get; set; } = new List<Person>();
+        public List<Position> AllPositions { get; set; } = new List<Position>();
+        public List<Dependence> AllDependences { get; set; } = new List<Dependence>();
 
-        // Propiedades de Asignación de Persona
         [BindProperty]
         public int? SelectedPersonId { get; set; }
-        public List<Person> AllPersons { get; set; } = new();
 
         [BindProperty]
-        public string? AssignmentComment { get; set; }
+        public string Localization { get; set; }
 
-        // Propiedad para el Departamento de Destino (Localization)
         [BindProperty]
-        public string? Localization { get; set; }
+        public string AssignmentComment { get; set; }
 
-        // Lista de los 9 Departamentos de Bolivia para el Select
-        public List<string> DepartamentosBolivia => new()
-        {
-            "Chuquisaca",
-            "La Paz",
-            "Cochabamba",
-            "Oruro",
-            "Potosí",
-            "Tarija",
-            "Santa Cruz",
-            "Beni",
-            "Pando"
-        };
+        [BindProperty]
+        public List<ChecklistItemVM> AllChecklistItems { get; set; } = new List<ChecklistItemVM>();
+
+        [BindProperty]
+        public string NewCatalogDetailName { get; set; }
+
+        [BindProperty]
+        public bool NewCatalogIsComplement { get; set; }
+
+        // Propiedades para Modal de Persona
+        [BindProperty]
+        public int? ModalPersonId { get; set; }
+
+        [BindProperty]
+        public string ModalNewPersonLastName { get; set; }
+
+        [BindProperty]
+        public string ModalNewPersonIdentification { get; set; }
+
+        [BindProperty]
+        public string ModalNewPersonNumbers { get; set; }
 
         [BindProperty]
         public bool ModalNewPersonIsActive { get; set; } = true;
 
-        // Propiedades para Modal de Nueva Persona
         [BindProperty]
-        public string? ModalNewPersonLastName { get; set; }
-        [BindProperty]
-        public string? ModalNewPersonIdentification { get; set; }
-        [BindProperty]
-        public string? ModalNewPersonNumbers { get; set; }
-
-        // Propiedades para Catálogo de Componentes/Complementos
-        [BindProperty]
-        public string? NewCatalogDetailName { get; set; }
-        [BindProperty]
-        public bool NewCatalogIsComplement { get; set; }
+        public int? ModalNewPersonPositionId { get; set; }
 
         [BindProperty]
-        public int EditCatalogId { get; set; }
-        [BindProperty]
-        public string? EditCatalogName { get; set; }
-        [BindProperty]
-        public bool EditCatalogComplement { get; set; }
+        public int? ModalNewPersonDependenceId { get; set; }
 
-        [BindProperty]
-        public List<ChecklistRowInput> AllChecklistItems { get; set; } = new();
-
-        [TempData]
-        public string? StatusMessage { get; set; }
-        [TempData]
-        public string? ErrorMessage { get; set; }
-
+        public string AssignedPersonDisplayValue { get; set; }
         public bool IsAlreadyAssigned { get; set; }
-        public string? AssignedPersonDisplayValue { get; set; }
 
-        public async Task<IActionResult> OnGetAsync(int id)
+        [TempData]
+        public string StatusMessage { get; set; }
+
+        [TempData]
+        public string ErrorMessage { get; set; }
+
+        [BindProperty]
+        public int? ModalPositionId { get; set; }
+
+        [BindProperty]
+        public string NewPositionName { get; set; }
+
+        [BindProperty]
+        public int? ModalDependenceId { get; set; }
+
+        [BindProperty]
+        public string NewDependenceName { get; set; }
+
+        // ==========================================
+        // HANDLERS PARA REGISTRAR O MODIFICAR CARGO Y DEPENDENCIA
+        // ==========================================
+        // ==========================================
+        // HANDLERS AJAX PARA CARGO Y DEPENDENCIA
+        // ==========================================
+        public async Task<IActionResult> OnPostRegisterPositionAsync()
         {
-            Id = id;
-            Product = await _context.Products.FindAsync(Id);
-            if (Product == null) return NotFound();
-
-            await LoadDataAsync();
-            return Page();
-        }
-
-        private async Task LoadDataAsync()
-        {
-            AllPersons = await _context.Persons.OrderBy(p => p.LastName).ToListAsync();
-
-            var activeCharacteristic = await _context.Characteristics
-                .Include(c => c.Person)
-                .FirstOrDefaultAsync(c => c.ProductId == Id && c.Active);
-
-            if (activeCharacteristic?.Person != null)
+            if (string.IsNullOrWhiteSpace(NewPositionName))
             {
-                SelectedPersonId = activeCharacteristic.PersonId;
-                AssignmentComment = activeCharacteristic.Coment;
-                Localization = activeCharacteristic.Localization;
+                return new JsonResult(new { success = false, message = "El nombre del cargo no puede estar vacío." });
+            }
 
-                // Marcamos que ya está asignado y formateamos el texto para el input
-                IsAlreadyAssigned = true;
-                AssignedPersonDisplayValue = $"{activeCharacteristic.Person.LastName} (CI: {activeCharacteristic.Person.Identification})";
+            Position positionObj;
+
+            if (ModalPositionId.HasValue && ModalPositionId.Value > 0)
+            {
+                positionObj = await _context.Positions.FindAsync(ModalPositionId.Value);
+                if (positionObj != null)
+                {
+                    positionObj.PositionName = NewPositionName.Trim();
+                }
             }
             else
             {
-                IsAlreadyAssigned = false;
-                AssignedPersonDisplayValue = string.Empty;
+                positionObj = new Position
+                {
+                    PositionName = NewPositionName.Trim(),
+                    Active = true
+                };
+                _context.Positions.Add(positionObj);
             }
 
-            var allDetails = await _context.Details.ToListAsync();
+            await _context.SaveChangesAsync();
+
+            return new JsonResult(new
+            {
+                success = true,
+                id = positionObj.Id,
+                name = positionObj.PositionName,
+                isEdit = ModalPositionId.HasValue && ModalPositionId.Value > 0
+            });
+        }
+
+        public async Task<IActionResult> OnPostRegisterDependenceAsync()
+        {
+            if (string.IsNullOrWhiteSpace(NewDependenceName))
+            {
+                return new JsonResult(new { success = false, message = "El nombre de la dependencia no puede estar vacío." });
+            }
+
+            Dependence dependenceObj;
+
+            if (ModalDependenceId.HasValue && ModalDependenceId.Value > 0)
+            {
+                dependenceObj = await _context.Dependences.FindAsync(ModalDependenceId.Value);
+                if (dependenceObj != null)
+                {
+                    dependenceObj.DependenceName = NewDependenceName.Trim();
+                }
+            }
+            else
+            {
+                dependenceObj = new Dependence
+                {
+                    DependenceName = NewDependenceName.Trim(),
+                    Active = true
+                };
+                _context.Dependences.Add(dependenceObj);
+            }
+
+            await _context.SaveChangesAsync();
+
+            return new JsonResult(new
+            {
+                success = true,
+                id = dependenceObj.Id,
+                name = dependenceObj.DependenceName,
+                isEdit = ModalDependenceId.HasValue && ModalDependenceId.Value > 0
+            });
+        }
+
+        public readonly List<string> DepartamentosBolivia = new List<string>
+        {
+            "Beni", "Chuquisaca", "Cochabamba", "La Paz", "Oruro", "Pando", "Potosí", "Santa Cruz", "Tarija"
+        };
+
+        public class ChecklistItemVM
+        {
+            public int DetailsId { get; set; }
+            public string DetailName { get; set; }
+            public bool Complement { get; set; }
+            public bool IsSelected { get; set; }
+            public int Amount { get; set; } = 1;
+            public string DetailsValue { get; set; }
+        }
+
+        public async Task<IActionResult> OnGetAsync()
+        {
+            Product = await _context.Products
+                .Include(p => p.Category)
+                .FirstOrDefaultAsync(p => p.Id == Id);
+
+            if (Product == null)
+            {
+                return NotFound();
+            }
+
+            await LoadMasterDataAsync();
+
+            // Cargar asignación existente
+            var activeChar = await _context.Characteristics
+                .Include(c => c.Person)
+                .FirstOrDefaultAsync(c => c.ProductId == Id && c.Active);
+
+            if (activeChar != null)
+            {
+                IsAlreadyAssigned = true;
+                SelectedPersonId = activeChar.PersonId;
+                Localization = activeChar.Localization;
+                AssignmentComment = activeChar.Coment;
+                if (activeChar.Person != null)
+                {
+                    AssignedPersonDisplayValue = $"{activeChar.Person.LastName} (CI: {activeChar.Person.Identification})";
+                }
+            }
+
+            // Cargar items del catálogo y asociar con ProductDetail
+            var catalogDetails = await _context.Details.ToListAsync();
             var existingProductDetails = await _context.ProductDetails
                 .Where(pd => pd.ProductId == Id)
                 .ToListAsync();
 
-            AllChecklistItems = allDetails.Select(d => {
-                var existing = existingProductDetails.FirstOrDefault(ed => ed.DetailsId == d.Id);
-                return new ChecklistRowInput
+            AllChecklistItems = catalogDetails.Select(d =>
+            {
+                var pd = existingProductDetails.FirstOrDefault(x => x.DetailsId == d.Id);
+                return new ChecklistItemVM
                 {
                     DetailsId = d.Id,
                     DetailName = d.DetailName,
                     Complement = d.Complement,
-                    IsSelected = existing != null,
-                    Amount = existing?.Amount > 0 ? existing.Amount : 1,
-                    DetailsValue = existing?.DetailsValue ?? string.Empty
+                    IsSelected = pd != null,
+                    Amount = pd?.Amount ?? 1,
+                    DetailsValue = pd?.DetailsValue ?? ""
                 };
             }).ToList();
+
+            return Page();
         }
 
-        public async Task<IActionResult> OnPostRegisterPersonAsync()
+        private async Task LoadMasterDataAsync()
         {
-            if (!string.IsNullOrWhiteSpace(ModalNewPersonLastName) && !string.IsNullOrWhiteSpace(ModalNewPersonIdentification))
-            {
-                var newPerson = new Person
-                {
-                    LastName = ModalNewPersonLastName.Trim(),
-                    Identification = ModalNewPersonIdentification.Trim(),
-                    Numbers = ModalNewPersonNumbers?.Trim(),
-                    Active = ModalNewPersonIsActive
-                };
-                _context.Persons.Add(newPerson);
-                await _context.SaveChangesAsync();
-                SelectedPersonId = newPerson.Id;
-                StatusMessage = "Persona registrada y seleccionada exitosamente.";
-            }
-            else
-            {
-                ErrorMessage = "Complete los campos obligatorios para registrar a la persona.";
-            }
+            AllPersons = await _context.Persons.Where(p => p.Active).ToListAsync();
 
-            return RedirectToPage(new { id = Id, mode = "assign" });
+            // Nombres de propiedades tomados de tu modelo Position y Dependence
+            AllPositions = await _context.Positions.Where(p => p.Active).OrderBy(p => p.PositionName).ToListAsync();
+            AllDependences = await _context.Dependences.Where(d => d.Active).OrderBy(d => d.DependenceName).ToListAsync();
         }
 
         public async Task<IActionResult> OnPostSaveAssignAsync()
         {
-            Product = await _context.Products.FindAsync(Id);
-            if (Product == null) return NotFound();
-
-            var characteristic = await _context.Characteristics
-                .FirstOrDefaultAsync(c => c.ProductId == Id && c.Active);
-
-            if (SelectedPersonId.HasValue && SelectedPersonId.Value > 0)
+            if (SelectedPersonId == null || SelectedPersonId == 0)
             {
-                if (characteristic != null)
+                ErrorMessage = "Debe seleccionar una persona activa para la asignación.";
+                return await OnGetAsync();
+            }
+
+            var activeChars = await _context.Characteristics.Where(c => c.ProductId == Id && c.Active).ToListAsync();
+            foreach (var ac in activeChars)
+            {
+                ac.Active = false;
+            }
+
+            var newChar = new Characteristic
+            {
+                ProductId = Id,
+                PersonId = SelectedPersonId.Value,
+                Localization = Localization,
+                Coment = AssignmentComment,
+                Date = DateTime.Now,
+                Active = true
+            };
+
+            _context.Characteristics.Add(newChar);
+
+            // Guardar o actualizar complementos seleccionados
+            var currentProductDetails = await _context.ProductDetails.Where(pd => pd.ProductId == Id).ToListAsync();
+
+            foreach (var item in AllChecklistItems.Where(i => i.Complement))
+            {
+                var existingPd = currentProductDetails.FirstOrDefault(pd => pd.DetailsId == item.DetailsId);
+
+                if (item.IsSelected)
                 {
-                    characteristic.PersonId = SelectedPersonId.Value;
-                    characteristic.Coment = AssignmentComment;
-                    characteristic.Localization = Localization; // Actualiza el departamento
-                }
-                else
-                {
-                    _context.Characteristics.Add(new Characteristic
+                    if (existingPd != null)
                     {
-                        ProductId = Id,
-                        PersonId = SelectedPersonId.Value,
-                        Active = true,
-                        Date = DateTime.UtcNow, // CORREGIDO A UTC para evitar error en PostgreSQL
-                        Localization = Localization ?? "La Paz", // Guarda el departamento seleccionado
-                        Coment = AssignmentComment
-                    });
+                        existingPd.Amount = item.Amount;
+                        existingPd.DetailsValue = item.DetailsValue;
+                    }
+                    else
+                    {
+                        _context.ProductDetails.Add(new ProductDetail
+                        {
+                            ProductId = Id,
+                            DetailsId = item.DetailsId,
+                            Amount = item.Amount,
+                            DetailsValue = item.DetailsValue
+                        });
+                    }
                 }
-            }
-            else
-            {
-                if (characteristic != null)
+                else if (existingPd != null)
                 {
-                    characteristic.Active = false;
+                    _context.ProductDetails.Remove(existingPd);
                 }
-            }
-
-            var existingProductDetails = await _context.ProductDetails
-                .Where(pd => pd.ProductId == Id)
-                .ToListAsync();
-
-            var complementDetailIds = await _context.Details.Where(d => d.Complement).Select(d => d.Id).ToListAsync();
-            var currentComplements = existingProductDetails.Where(pd => complementDetailIds.Contains(pd.DetailsId)).ToList();
-
-            _context.ProductDetails.RemoveRange(currentComplements);
-
-            foreach (var item in AllChecklistItems.Where(i => i.IsSelected && i.Complement))
-            {
-                _context.ProductDetails.Add(new ProductDetail
-                {
-                    ProductId = Id,
-                    DetailsId = item.DetailsId,
-                    Amount = item.Amount > 0 ? item.Amount : 1,
-                    DetailsValue = item.DetailsValue ?? string.Empty
-                });
             }
 
             await _context.SaveChangesAsync();
-            StatusMessage = "Asignación y complementos guardados correctamente.";
+            StatusMessage = "Asignación guardada correctamente.";
             return RedirectToPage(new { id = Id, mode = "assign" });
+        }
+
+        public async Task<IActionResult> OnPostModifyDetailsAsync()
+        {
+            var currentProductDetails = await _context.ProductDetails.Where(pd => pd.ProductId == Id).ToListAsync();
+
+            foreach (var item in AllChecklistItems.Where(i => !i.Complement))
+            {
+                var existingPd = currentProductDetails.FirstOrDefault(pd => pd.DetailsId == item.DetailsId);
+
+                if (item.IsSelected)
+                {
+                    if (existingPd != null)
+                    {
+                        existingPd.Amount = item.Amount;
+                        existingPd.DetailsValue = item.DetailsValue;
+                    }
+                    else
+                    {
+                        _context.ProductDetails.Add(new ProductDetail
+                        {
+                            ProductId = Id,
+                            DetailsId = item.DetailsId,
+                            Amount = item.Amount,
+                            DetailsValue = item.DetailsValue
+                        });
+                    }
+                }
+                else if (existingPd != null)
+                {
+                    _context.ProductDetails.Remove(existingPd);
+                }
+            }
+
+            await _context.SaveChangesAsync();
+            StatusMessage = "Detalles del producto modificados correctamente.";
+            return RedirectToPage(new { id = Id, mode = "details" });
         }
 
         public async Task<IActionResult> OnPostRegisterCatalogItemAsync()
         {
             if (!string.IsNullOrWhiteSpace(NewCatalogDetailName))
             {
-                var newDetail = new Detail
+                var detail = new Detail
                 {
                     DetailName = NewCatalogDetailName.Trim(),
                     Complement = NewCatalogIsComplement
                 };
-                _context.Details.Add(newDetail);
+                _context.Details.Add(detail);
                 await _context.SaveChangesAsync();
-                StatusMessage = "Elemento agregado al catálogo exitosamente.";
-            }
-            else
-            {
-                ErrorMessage = "El nombre del elemento no puede estar vacío.";
+                StatusMessage = "Elemento registrado en el catálogo.";
             }
 
-            return RedirectToPage(new { id = Id, mode = "details" });
-        }
-
-        public async Task<IActionResult> OnPostEditCatalogItemAsync()
-        {
-            var detail = await _context.Details.FindAsync(EditCatalogId);
-            if (detail != null && !string.IsNullOrWhiteSpace(EditCatalogName))
-            {
-                int usageCount = await _context.ProductDetails.CountAsync(pd => pd.DetailsId == EditCatalogId);
-
-                detail.DetailName = EditCatalogName.Trim();
-                detail.Complement = EditCatalogComplement;
-                await _context.SaveChangesAsync();
-
-                StatusMessage = $"Elemento actualizado correctamente. (Vinculado a {usageCount} producto(s)).";
-            }
-            else
-            {
-                ErrorMessage = "No se pudo actualizar el elemento del catálogo.";
-            }
-
-            return RedirectToPage(new { id = Id, mode = "details" });
+            return RedirectToPage(new { id = Id, mode = Mode });
         }
 
         public async Task<IActionResult> OnPostDeleteCatalogItemAsync(int detailId)
@@ -274,57 +371,59 @@ namespace Inventario_QR.Pages
             var detail = await _context.Details.FindAsync(detailId);
             if (detail != null)
             {
-                var relatedProductDetails = await _context.ProductDetails.Where(pd => pd.DetailsId == detailId).ToListAsync();
-
-                if (relatedProductDetails.Any())
-                {
-                    ErrorMessage = $"No se puede eliminar '{detail.DetailName}' porque está siendo utilizado en otros productos/registros de la auditoría.";
-                    return RedirectToPage(new { id = Id, mode = "details" });
-                }
-
+                var relatedProductDetails = _context.ProductDetails.Where(pd => pd.DetailsId == detailId);
+                _context.ProductDetails.RemoveRange(relatedProductDetails);
                 _context.Details.Remove(detail);
                 await _context.SaveChangesAsync();
-                StatusMessage = "Elemento eliminado del catálogo exitosamente.";
+                StatusMessage = "Elemento eliminado del catálogo.";
             }
 
-            return RedirectToPage(new { id = Id, mode = "details" });
+            return RedirectToPage(new { id = Id, mode = Mode });
         }
 
-        public async Task<IActionResult> OnPostModifyDetailsAsync()
+        public async Task<IActionResult> OnPostRegisterPersonAsync()
         {
-            Product = await _context.Products.FindAsync(Id);
-            if (Product == null) return NotFound();
-
-            var existingProductDetails = await _context.ProductDetails
-                .Where(pd => pd.ProductId == Id)
-                .ToListAsync();
-
-            _context.ProductDetails.RemoveRange(existingProductDetails);
-
-            foreach (var item in AllChecklistItems.Where(i => i.IsSelected))
+            if (!string.IsNullOrWhiteSpace(ModalNewPersonLastName) && !string.IsNullOrWhiteSpace(ModalNewPersonIdentification))
             {
-                _context.ProductDetails.Add(new ProductDetail
+                Person person;
+                if (ModalPersonId.HasValue && ModalPersonId.Value > 0)
                 {
-                    ProductId = Id,
-                    DetailsId = item.DetailsId,
-                    Amount = item.Amount > 0 ? item.Amount : 1,
-                    DetailsValue = item.DetailsValue ?? string.Empty
-                });
+                    person = await _context.Persons.FindAsync(ModalPersonId.Value);
+                    if (person != null)
+                    {
+                        person.LastName = ModalNewPersonLastName.Trim();
+                        person.Identification = ModalNewPersonIdentification.Trim();
+                        person.Numbers = ModalNewPersonNumbers?.Trim();
+                        person.Active = ModalNewPersonIsActive;
+                        person.PositionId = ModalNewPersonPositionId;
+                        person.DependenceId = ModalNewPersonDependenceId;
+                        StatusMessage = "Persona actualizada con éxito.";
+                    }
+                }
+                else
+                {
+                    person = new Person
+                    {
+                        LastName = ModalNewPersonLastName.Trim(),
+                        Identification = ModalNewPersonIdentification.Trim(),
+                        Numbers = ModalNewPersonNumbers?.Trim(),
+                        Active = ModalNewPersonIsActive,
+                        PositionId = ModalNewPersonPositionId,
+                        DependenceId = ModalNewPersonDependenceId
+                    };
+                    _context.Persons.Add(person);
+                    await _context.SaveChangesAsync();
+                    StatusMessage = "Persona registrada con éxito.";
+                }
+
+                await _context.SaveChangesAsync();
+                if (person != null)
+                {
+                    SelectedPersonId = person.Id;
+                }
             }
 
-            await _context.SaveChangesAsync();
-            StatusMessage = "Detalles modificados correctamente.";
-            return RedirectToPage(new { id = Id, mode = "details" });
+            return RedirectToPage(new { id = Id, mode = "assign" });
         }
-    }
-
-    public class ChecklistRowInput
-    {
-        public int DetailsId { get; set; }
-        public string DetailName { get; set; } = string.Empty;
-        public bool Complement { get; set; }
-        public bool IsSelected { get; set; }
-        public int Amount { get; set; } = 1;
-        public string DetailsValue { get; set; } = string.Empty;
     }
 }
