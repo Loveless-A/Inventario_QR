@@ -170,7 +170,7 @@ namespace Inventario_QR.Models
         public string Localization { get; set; }
 
         [Column("date")]
-        public DateTime Date { get; set; } = DateTime.Now;
+        public DateTime Date { get; set; } = DateTime.UtcNow;
 
         [Column("active")]
         public bool Active { get; set; } = true;

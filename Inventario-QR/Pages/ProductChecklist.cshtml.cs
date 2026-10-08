@@ -258,40 +258,69 @@ namespace Inventario_QR.Pages
                 return await OnGetAsync();
             }
 
-            var activeChars = await _context.Characteristics.Where(c => c.ProductId == Id && c.Active).ToListAsync();
-            foreach (var ac in activeChars)
+            // ============================================================
+            // BUSCAR ASIGNACIÓN EXISTENTE DEL PRODUCTO
+            // ============================================================
+
+            var existingChar = await _context.Characteristics
+                .FirstOrDefaultAsync(c => c.ProductId == Id && c.Active);
+
+            bool esNuevaAsignacion = existingChar == null;
+
+            // ============================================================
+            // SI EXISTE -> MODIFICAR
+            // SI NO EXISTE -> CREAR
+            // ============================================================
+
+            if (existingChar != null)
             {
-                ac.Active = false;
+                // MODIFICAR LA FILA EXISTENTE
+                existingChar.PersonId = SelectedPersonId.Value;
+                existingChar.Localization = Localization;
+                existingChar.Coment = AssignmentComment;
+                existingChar.Date = DateTime.UtcNow;
+                existingChar.Active = true;
+            }
+            else
+            {
+                // CREAR NUEVA ASIGNACIÓN
+                existingChar = new Characteristic
+                {
+                    ProductId = Id,
+                    PersonId = SelectedPersonId.Value,
+                    Localization = Localization,
+                    Coment = AssignmentComment,
+                    Date = DateTime.UtcNow,
+                    Active = true
+                };
+
+                _context.Characteristics.Add(existingChar);
             }
 
-            var newChar = new Characteristic
-            {
-                ProductId = Id,
-                PersonId = SelectedPersonId.Value,
-                Localization = Localization,
-                Coment = AssignmentComment,
-                Date = DateTime.Now,
-                Active = true
-            };
+            // ============================================================
+            // COMPLEMENTOS
+            // ============================================================
 
-            _context.Characteristics.Add(newChar);
-
-            // Guardar o actualizar complementos seleccionados
-            var currentProductDetails = await _context.ProductDetails.Where(pd => pd.ProductId == Id).ToListAsync();
+            var currentProductDetails = await _context.ProductDetails
+                .Where(pd => pd.ProductId == Id)
+                .ToListAsync();
 
             foreach (var item in AllChecklistItems.Where(i => i.Complement))
             {
-                var existingPd = currentProductDetails.FirstOrDefault(pd => pd.DetailsId == item.DetailsId);
+                var existingPd = currentProductDetails
+                    .FirstOrDefault(pd => pd.DetailsId == item.DetailsId);
 
                 if (item.IsSelected)
                 {
                     if (existingPd != null)
                     {
+                        // MODIFICAR COMPLEMENTO EXISTENTE
                         existingPd.Amount = item.Amount;
                         existingPd.DetailsValue = item.DetailsValue;
                     }
                     else
                     {
+                        // AGREGAR NUEVO COMPLEMENTO
                         _context.ProductDetails.Add(new ProductDetail
                         {
                             ProductId = Id,
@@ -303,13 +332,26 @@ namespace Inventario_QR.Pages
                 }
                 else if (existingPd != null)
                 {
+                    // QUITAR COMPLEMENTO
                     _context.ProductDetails.Remove(existingPd);
                 }
             }
 
             await _context.SaveChangesAsync();
-            StatusMessage = "Asignación guardada correctamente.";
-            return RedirectToPage(new { id = Id, mode = "assign" });
+
+            // ============================================================
+            // MENSAJE
+            // ============================================================
+
+            StatusMessage = esNuevaAsignacion
+                ? "Asignación guardada correctamente."
+                : "Asignación modificada correctamente.";
+
+            return RedirectToPage(new
+            {
+                id = Id,
+                mode = "assign"
+            });
         }
 
         public async Task<IActionResult> OnPostModifyDetailsAsync()
