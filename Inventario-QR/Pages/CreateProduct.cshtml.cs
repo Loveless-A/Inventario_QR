@@ -11,7 +11,6 @@ using System.Threading.Tasks;
 
 namespace Inventario_QR.Pages
 {
-    // IgnoreAntiforgeryToken permite evitar fallos de Token al enviar peticiones JSON por Fetch AJAX
     [IgnoreAntiforgeryToken(Order = 1001)]
     public class CreateProductModel : PageModel
     {
@@ -29,9 +28,24 @@ namespace Inventario_QR.Pages
 
         public List<Category> CategoryList { get; set; } = new();
 
+        public List<CatalogItemVM> AllCatalogItems { get; set; } = new();
+
+        [BindProperty]
+        public List<CatalogItemVM> SelectedCatalogItems { get; set; } = new();
+
+        public class CatalogItemVM
+        {
+            public int DetailsId { get; set; }
+            public string DetailName { get; set; } = string.Empty;
+            public bool Complement { get; set; }
+            public bool IsSelected { get; set; }
+            public int Amount { get; set; } = 1;
+            public string DetailsValue { get; set; } = string.Empty;
+        }
+
         public async Task<IActionResult> OnGetAsync()
         {
-            await LoadCategoriesAsync();
+            await LoadDataAsync();
 
             Product.Code = "INV-" + Guid.NewGuid().ToString().Substring(0, 6).ToUpper();
             Product.Qr = "QR-" + Guid.NewGuid().ToString().Substring(0, 8).ToUpper();
@@ -42,19 +56,103 @@ namespace Inventario_QR.Pages
 
         public async Task<IActionResult> OnPostAsync()
         {
-            // Remover la validación de la entidad Category ligada si existe como propiedad de navegación
             ModelState.Remove("Product.Category");
 
             if (!ModelState.IsValid)
             {
-                await LoadCategoriesAsync();
+                await LoadDataAsync();
                 return Page();
             }
 
             _context.Products.Add(Product);
             await _context.SaveChangesAsync();
 
+            if (SelectedCatalogItems != null && SelectedCatalogItems.Any())
+            {
+                foreach (var item in SelectedCatalogItems.Where(i => i.IsSelected))
+                {
+                    _context.ProductDetails.Add(new ProductDetail
+                    {
+                        ProductId = Product.Id,
+                        DetailsId = item.DetailsId,
+                        Amount = item.Amount,
+                        DetailsValue = item.DetailsValue ?? string.Empty
+                    });
+                }
+                await _context.SaveChangesAsync();
+            }
+
             return RedirectToPage("./Index");
+        }
+
+        // --- AJAX: REGISTRAR DETALLE EN EL CATÁLOGO ---
+        public async Task<IActionResult> OnPostRegisterCatalogItemAsync([FromBody] Detail detail)
+        {
+            if (string.IsNullOrWhiteSpace(detail.DetailName))
+            {
+                return BadRequest(new { message = "El nombre del detalle es obligatorio." });
+            }
+
+            detail.Complement = false; // Forzar que sea detalle principal
+            _context.Details.Add(detail);
+            await _context.SaveChangesAsync();
+
+            return new JsonResult(new
+            {
+                success = true,
+                id = detail.Id,
+                name = detail.DetailName,
+                complement = detail.Complement
+            });
+        }
+
+        // --- AJAX: MODIFICAR DETALLE DEL CATÁLOGO ---
+        public async Task<IActionResult> OnPostUpdateCatalogItemAsync([FromBody] Detail detail)
+        {
+            if (detail.Id <= 0 || string.IsNullOrWhiteSpace(detail.DetailName))
+            {
+                return BadRequest(new { message = "Datos inválidos para actualizar el detalle." });
+            }
+
+            var detailDb = await _context.Details.FindAsync(detail.Id);
+            if (detailDb == null)
+            {
+                return NotFound(new { message = "El detalle no existe en el catálogo." });
+            }
+
+            detailDb.DetailName = detail.DetailName.Trim();
+            await _context.SaveChangesAsync();
+
+            return new JsonResult(new
+            {
+                success = true,
+                id = detailDb.Id,
+                name = detailDb.DetailName
+            });
+        }
+
+        // --- AJAX: ELIMINAR DETALLE DEL CATÁLOGO ---
+        public async Task<IActionResult> OnPostDeleteCatalogItemAsync([FromBody] Detail detail)
+        {
+            if (detail.Id <= 0)
+            {
+                return BadRequest(new { message = "ID de detalle inválido." });
+            }
+
+            var detailDb = await _context.Details.FindAsync(detail.Id);
+            if (detailDb == null)
+            {
+                return NotFound(new { message = "El detalle no existe." });
+            }
+
+            // Eliminar dependencias en ProductDetails si existieran
+            var relatedProductDetails = _context.ProductDetails.Where(pd => pd.DetailsId == detail.Id);
+            _context.ProductDetails.RemoveRange(relatedProductDetails);
+
+            _context.Details.Remove(detailDb);
+            await _context.SaveChangesAsync();
+
+            return new JsonResult(new { success = true, id = detail.Id });
         }
 
         // --- AJAX: CREAR CATEGORÍA ---
@@ -111,7 +209,7 @@ namespace Inventario_QR.Pages
             });
         }
 
-        private async Task LoadCategoriesAsync()
+        private async Task LoadDataAsync()
         {
             CategoryList = await _context.Categories
                 .Where(c => c.Active)
@@ -124,6 +222,17 @@ namespace Inventario_QR.Pages
             });
 
             CategoriesSL = new SelectList(selectData, "Id", "DisplayText");
+
+            var catalogDetails = await _context.Details.ToListAsync();
+            AllCatalogItems = catalogDetails.Select(d => new CatalogItemVM
+            {
+                DetailsId = d.Id,
+                DetailName = d.DetailName,
+                Complement = d.Complement,
+                IsSelected = !d.Complement,
+                Amount = 1,
+                DetailsValue = string.Empty
+            }).ToList();
         }
     }
 }

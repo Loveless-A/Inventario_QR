@@ -22,9 +22,6 @@ namespace Inventario_QR.Pages
         [BindProperty(SupportsGet = true)]
         public int Id { get; set; }
 
-        [BindProperty(SupportsGet = true)]
-        public string Mode { get; set; } // "assign" o "details"
-
         public Product Product { get; set; }
         public List<Person> AllPersons { get; set; } = new List<Person>();
         public List<Position> AllPositions { get; set; } = new List<Position>();
@@ -91,12 +88,6 @@ namespace Inventario_QR.Pages
         [BindProperty]
         public string NewDependenceName { get; set; }
 
-        // ==========================================
-        // HANDLERS PARA REGISTRAR O MODIFICAR CARGO Y DEPENDENCIA
-        // ==========================================
-        // ==========================================
-        // HANDLERS AJAX PARA CARGO Y DEPENDENCIA
-        // ==========================================
         public async Task<IActionResult> OnPostRegisterPositionAsync()
         {
             if (string.IsNullOrWhiteSpace(NewPositionName))
@@ -201,7 +192,6 @@ namespace Inventario_QR.Pages
 
             await LoadMasterDataAsync();
 
-            // Cargar asignación existente
             var activeChar = await _context.Characteristics
                 .Include(c => c.Person)
                 .FirstOrDefaultAsync(c => c.ProductId == Id && c.Active);
@@ -218,7 +208,6 @@ namespace Inventario_QR.Pages
                 }
             }
 
-            // Cargar items del catálogo y asociar con ProductDetail
             var catalogDetails = await _context.Details.ToListAsync();
             var existingProductDetails = await _context.ProductDetails
                 .Where(pd => pd.ProductId == Id)
@@ -244,8 +233,6 @@ namespace Inventario_QR.Pages
         private async Task LoadMasterDataAsync()
         {
             AllPersons = await _context.Persons.Where(p => p.Active).ToListAsync();
-
-            // Nombres de propiedades tomados de tu modelo Position y Dependence
             AllPositions = await _context.Positions.Where(p => p.Active).OrderBy(p => p.PositionName).ToListAsync();
             AllDependences = await _context.Dependences.Where(d => d.Active).OrderBy(d => d.DependenceName).ToListAsync();
         }
@@ -258,23 +245,13 @@ namespace Inventario_QR.Pages
                 return await OnGetAsync();
             }
 
-            // ============================================================
-            // BUSCAR ASIGNACIÓN EXISTENTE DEL PRODUCTO
-            // ============================================================
-
             var existingChar = await _context.Characteristics
                 .FirstOrDefaultAsync(c => c.ProductId == Id && c.Active);
 
             bool esNuevaAsignacion = existingChar == null;
 
-            // ============================================================
-            // SI EXISTE -> MODIFICAR
-            // SI NO EXISTE -> CREAR
-            // ============================================================
-
             if (existingChar != null)
             {
-                // MODIFICAR LA FILA EXISTENTE
                 existingChar.PersonId = SelectedPersonId.Value;
                 existingChar.Localization = Localization;
                 existingChar.Coment = AssignmentComment;
@@ -283,7 +260,6 @@ namespace Inventario_QR.Pages
             }
             else
             {
-                // CREAR NUEVA ASIGNACIÓN
                 existingChar = new Characteristic
                 {
                     ProductId = Id,
@@ -296,10 +272,6 @@ namespace Inventario_QR.Pages
 
                 _context.Characteristics.Add(existingChar);
             }
-
-            // ============================================================
-            // COMPLEMENTOS
-            // ============================================================
 
             var currentProductDetails = await _context.ProductDetails
                 .Where(pd => pd.ProductId == Id)
@@ -314,13 +286,11 @@ namespace Inventario_QR.Pages
                 {
                     if (existingPd != null)
                     {
-                        // MODIFICAR COMPLEMENTO EXISTENTE
                         existingPd.Amount = item.Amount;
                         existingPd.DetailsValue = item.DetailsValue;
                     }
                     else
                     {
-                        // AGREGAR NUEVO COMPLEMENTO
                         _context.ProductDetails.Add(new ProductDetail
                         {
                             ProductId = Id,
@@ -332,63 +302,17 @@ namespace Inventario_QR.Pages
                 }
                 else if (existingPd != null)
                 {
-                    // QUITAR COMPLEMENTO
                     _context.ProductDetails.Remove(existingPd);
                 }
             }
 
             await _context.SaveChangesAsync();
-
-            // ============================================================
-            // MENSAJE
-            // ============================================================
 
             StatusMessage = esNuevaAsignacion
                 ? "Asignación guardada correctamente."
                 : "Asignación modificada correctamente.";
 
-            return RedirectToPage(new
-            {
-                id = Id,
-                mode = "assign"
-            });
-        }
-
-        public async Task<IActionResult> OnPostModifyDetailsAsync()
-        {
-            var currentProductDetails = await _context.ProductDetails.Where(pd => pd.ProductId == Id).ToListAsync();
-
-            foreach (var item in AllChecklistItems.Where(i => !i.Complement))
-            {
-                var existingPd = currentProductDetails.FirstOrDefault(pd => pd.DetailsId == item.DetailsId);
-
-                if (item.IsSelected)
-                {
-                    if (existingPd != null)
-                    {
-                        existingPd.Amount = item.Amount;
-                        existingPd.DetailsValue = item.DetailsValue;
-                    }
-                    else
-                    {
-                        _context.ProductDetails.Add(new ProductDetail
-                        {
-                            ProductId = Id,
-                            DetailsId = item.DetailsId,
-                            Amount = item.Amount,
-                            DetailsValue = item.DetailsValue
-                        });
-                    }
-                }
-                else if (existingPd != null)
-                {
-                    _context.ProductDetails.Remove(existingPd);
-                }
-            }
-
-            await _context.SaveChangesAsync();
-            StatusMessage = "Detalles del producto modificados correctamente.";
-            return RedirectToPage(new { id = Id, mode = "details" });
+            return RedirectToPage(new { id = Id });
         }
 
         public async Task<IActionResult> OnPostRegisterCatalogItemAsync()
@@ -405,7 +329,7 @@ namespace Inventario_QR.Pages
                 StatusMessage = "Elemento registrado en el catálogo.";
             }
 
-            return RedirectToPage(new { id = Id, mode = Mode });
+            return RedirectToPage(new { id = Id });
         }
 
         public async Task<IActionResult> OnPostDeleteCatalogItemAsync(int detailId)
@@ -420,7 +344,7 @@ namespace Inventario_QR.Pages
                 StatusMessage = "Elemento eliminado del catálogo.";
             }
 
-            return RedirectToPage(new { id = Id, mode = Mode });
+            return RedirectToPage(new { id = Id });
         }
 
         public async Task<IActionResult> OnPostRegisterPersonAsync()
@@ -465,7 +389,7 @@ namespace Inventario_QR.Pages
                 }
             }
 
-            return RedirectToPage(new { id = Id, mode = "assign" });
+            return RedirectToPage(new { id = Id });
         }
     }
 }

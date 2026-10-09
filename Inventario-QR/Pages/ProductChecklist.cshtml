@@ -1,23 +1,13 @@
 ﻿@page "{id:int}"
 @model Inventario_QR.Pages.ProductChecklistModel
 @{
-    var isAssignMode = Model.Mode?.ToLower() == "assign";
-    ViewData["Title"] = (isAssignMode ? "Asignación de Persona: " : "Componentes y Detalles: ") + Model.Product?.ProductName;
+    ViewData["Title"] = "Asignación de Persona: " + Model.Product?.ProductName;
 }
 
 <div class="container mt-4 mb-5">
     <div class="card shadow border-0">
         <div class="card-header bg-success text-white d-flex justify-content-between align-items-center py-3">
-            <h4 class="mb-0">
-                @if (isAssignMode)
-                {
-                    <text>👥 Asignación de Persona y Complementos: @Model.Product?.ProductName</text>
-                }
-                else
-                {
-                    <text>📦 Componentes y Detalles: @Model.Product?.ProductName</text>
-                }
-            </h4>
+            <h4 class="mb-0">👥 Asignación de Persona y Complementos: @Model.Product?.ProductName</h4>
             <span class="badge bg-light text-dark fs-6">Código: @Model.Product?.Code</span>
         </div>
         <div class="card-body">
@@ -37,466 +27,331 @@
                 </div>
             }
 
-            @if (isAssignMode)
-            {
-                <form method="post" asp-page-handler="SaveAssign">
+            <form method="post" asp-page-handler="SaveAssign">
 
-                    <div class="d-flex justify-content-between align-items-center mt-4">
-                        <a asp-page="./Index" class="btn btn-outline-secondary">← Volver al Panel</a>
-                    </div>
-
-                    <input type="hidden" name="id" value="@Model.Id" />
-                    <input type="hidden" name="mode" value="assign" />
-
-                    <div class="card bg-light border-0 p-4 mb-4 shadow-sm">
-                        <h5 class="mb-3 text-success">👤 Datos de Asignación y Destino</h5>
-
-                        <div class="row g-3">
-                            <div class="col-md-6">
-                                <label class="form-label fw-bold">Personal Asignado</label>
-                                <div class="input-group">
-                                    <input class="form-control" list="personsOptions" id="selectedPersonInput" value="@Model.AssignedPersonDisplayValue" placeholder="🔍 Buscar por nombre o CI..." required />
-                                    <button type="button" id="btnPersonAction" class="btn btn-outline-success fw-bold text-nowrap" data-bs-toggle="modal" data-bs-target="#registerPersonModal">
-                                        ➕ Nueva
-                                    </button>
-                                    <datalist id="personsOptions">
-                                        @foreach (var p in Model.AllPersons)
-                                        {
-                                            <option value="@p.LastName (CI: @p.Identification)"
-                                                    data-id="@p.Id"
-                                                    data-lastname="@p.LastName"
-                                                    data-identification="@p.Identification"
-                                                    data-numbers="@p.Numbers"
-                                                    data-positionid="@p.PositionId"
-                                                    data-dependenceid="@p.DependenceId"
-                                                    data-active="@p.Active">
-                                            </option>
-                                        }
-                                    </datalist>
-                                    <input type="hidden" asp-for="SelectedPersonId" id="SelectedPersonId" />
-                                </div>
-                            </div>
-
-                            <div class="col-md-6">
-                                <label asp-for="Localization" class="form-label fw-bold text-success">📍 Departamento de Destino</label>
-                                <select asp-for="Localization" class="form-select" required>
-                                    <option value="">-- Seleccione un Departamento --</option>
-                                    @foreach (var depto in Model.DepartamentosBolivia)
-                                    {
-                                        <option value="@depto">@depto</option>
-                                    }
-                                </select>
-                            </div>
-
-                            <div class="col-12">
-                                <label asp-for="AssignmentComment" class="form-label fw-bold text-success">💬 Comentario de Entrega / Estado de la Máquina</label>
-                                <textarea asp-for="AssignmentComment" class="form-control" rows="2" placeholder="Ej. Se entrega en buen estado con todos sus accesorios..."></textarea>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="card bg-light border-0 p-4 mb-4 shadow-sm">
-                        <h5 class="mb-3 text-success">➕ Registrar Complemento / Elemento</h5>
-                        <div class="row g-3 align-items-center">
-                            <div class="col-md-6">
-                                <input type="text" asp-for="NewCatalogDetailName" class="form-control" placeholder="Nombre (Ej. Procesador, Mouse)" />
-                            </div>
-                            <div class="col-md-4">
-                                <div class="form-check mt-2">
-                                    <input type="checkbox" asp-for="NewCatalogIsComplement" class="form-check-input" id="isComplementCheckAssign" />
-                                    <label class="form-check-label fw-bold small" for="isComplementCheckAssign">¿Es un Complemento?</label>
-                                </div>
-                            </div>
-                            <div class="col-md-2 text-end">
-                                <button type="submit" asp-page-handler="RegisterCatalogItem" class="btn btn-success w-100 fw-bold">
-                                    + Registrar
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="card bg-light border-0 p-3 mb-4 shadow-sm">
-                        <div class="d-flex justify-content-between align-items-center mb-3">
-                            <h5 class="mb-0 text-secondary">📦 Lista de Componentes y Detalles (@Model.AllChecklistItems.Count)</h5>
-                        </div>
-                        <div class="mb-3">
-                            <input type="text" id="searchFilterAssign" class="form-control" placeholder="🔍 Buscar elemento..." />
-                        </div>
-                        <div class="table-responsive">
-                            <table class="table table-hover align-middle search-table-assign">
-                                <thead class="table-light">
-                                    <tr>
-                                        <th style="width: 12%;">Seleccionar</th>
-                                        <th style="width: 30%;">Elemento</th>
-                                        <th style="width: 12%;">Cantidad</th>
-                                        <th style="width: 34%;">Observaciones / Serie</th>
-                                        <th style="width: 12%;" class="text-center">Gestión Catálogo</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    @{
-                                        var sortedItems = Model.AllChecklistItems.OrderBy(x => x.Complement).ToList();
-                                    }
-                                    @for (int i = 0; i < sortedItems.Count; i++)
-                                    {
-                                        var item = sortedItems[i];
-                                        <tr class="searchable-row-assign">
-                                            <td>
-                                                <input type="hidden" name="AllChecklistItems[@i].DetailsId" value="@item.DetailsId" />
-                                                <input type="hidden" name="AllChecklistItems[@i].DetailName" value="@item.DetailName" />
-                                                <input type="hidden" name="AllChecklistItems[@i].Complement" value="@item.Complement.ToString().ToLower()" />
-
-                                                @if (item.Complement)
-                                                {
-                                                    <input type="checkbox" name="AllChecklistItems[@i].IsSelected" value="true" class="form-check-input checklist-checkbox" @(item.IsSelected ? "checked" : "") />
-                                                }
-                                                else
-                                                {
-                                                    <span class="text-muted">-</span>
-                                                    <input type="hidden" name="AllChecklistItems[@i].IsSelected" value="false" />
-                                                }
-                                            </td>
-                                            <td>
-                                                <strong class="item-name-assign">@item.DetailName</strong>
-                                                @if (item.Complement)
-                                                {
-                                                    <span class="badge bg-secondary ms-2" style="font-size: 0.70rem;">(Complemento)</span>
-                                                }
-                                                else
-                                                {
-                                                    <span class="badge bg-success ms-2" style="font-size: 0.70rem;">(Principal)</span>
-                                                }
-                                            </td>
-                                            <td>
-                                                @if (item.Complement)
-                                                {
-                                                    <input type="number" name="AllChecklistItems[@i].Amount" value="@item.Amount" class="form-control form-control-sm input-amount" min="1" style="max-width: 100px;" @(item.IsSelected ? "" : "disabled") />
-                                                }
-                                                else
-                                                {
-                                                    <span class="text-muted">-</span>
-                                                    <input type="hidden" name="AllChecklistItems[@i].Amount" value="1" />
-                                                }
-                                            </td>
-                                            <td>
-                                                @if (item.Complement)
-                                                {
-                                                    <input type="text" name="AllChecklistItems[@i].DetailsValue" value="@item.DetailsValue" class="form-control form-control-sm input-details" placeholder="Ej. Serie, marca..." @(item.IsSelected ? "" : "disabled") />
-                                                }
-                                                else
-                                                {
-                                                    <span class="text-dark">@(string.IsNullOrEmpty(item.DetailsValue) ? "-" : item.DetailsValue)</span>
-                                                    <input type="hidden" name="AllChecklistItems[@i].DetailsValue" value="@item.DetailsValue" />
-                                                }
-                                            </td>
-                                            <td class="text-center">
-                                                @if (item.Complement)
-                                                {
-                                                    <div class="btn-group" role="group">
-                                                        <button type="button" class="btn btn-sm btn-outline-warning btn-edit-catalog"
-                                                                data-id="@item.DetailsId"
-                                                                data-name="@item.DetailName"
-                                                                data-iscomplement="true"
-                                                                title="Modificar">
-                                                            ✏️
-                                                        </button>
-                                                        <button type="submit" asp-page-handler="DeleteCatalogItem" asp-route-detailId="@item.DetailsId"
-                                                                class="btn btn-sm btn-outline-danger"
-                                                                onclick="return confirm('¿Estás seguro de eliminar este elemento del catálogo?');"
-                                                                title="Eliminar">
-                                                            🗑️
-                                                        </button>
-                                                    </div>
-                                                }
-                                                else
-                                                {
-                                                    <span class="text-muted">-</span>
-                                                }
-                                            </td>
-                                        </tr>
-                                    }
-                                </tbody>
-                            </table>
-                        </div>
-                    </div>
-
-                    <div class="d-flex justify-content-between align-items-center mt-4">
-                        <button type="submit" asp-page-handler="SaveAssign" class="btn @(Model.IsAlreadyAssigned ? "btn-warning" : "btn-success") fw-bold">
-                            💾 @(Model.IsAlreadyAssigned ? "Modificar Asignación" : "Guardar Asignación")
-                        </button>
-                    </div>
-                </form>
-            }
-            else
-            {
                 <div class="d-flex justify-content-between align-items-center mt-4">
                     <a asp-page="./Index" class="btn btn-outline-secondary">← Volver al Panel</a>
                 </div>
+
+                <input type="hidden" name="id" value="@Model.Id" />
+
                 <div class="card bg-light border-0 p-4 mb-4 shadow-sm">
-                    <form method="post" asp-page-handler="RegisterCatalogItem">
-                        <input type="hidden" name="id" value="@Model.Id" />
-                        <input type="hidden" name="mode" value="details" />
-                        <h5 class="mb-3 text-success">➕ Agregar Nuevo Elemento al Catálogo</h5>
-                        <div class="row g-3 align-items-center">
-                            <div class="col-md-6">
-                                <input type="text" asp-for="NewCatalogDetailName" class="form-control" placeholder="Nombre (Ej. Procesador, Mouse)" required />
-                            </div>
-                            <div class="col-md-4">
-                                <div class="form-check mt-2">
-                                    <input type="checkbox" asp-for="NewCatalogIsComplement" class="form-check-input" id="isComplementCheck" />
-                                    <label class="form-check-label fw-bold small" for="isComplementCheck">¿Es un Complemento?</label>
-                                </div>
-                            </div>
-                            <div class="col-md-2 text-end">
-                                <button type="submit" class="btn btn-success w-100 fw-bold">
-                                    + Registrar
+                    <h5 class="mb-3 text-success">👤 Datos de Asignación y Destino</h5>
+
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label class="form-label fw-bold">Personal Asignado</label>
+                            <div class="input-group">
+                                <input class="form-control" list="personsOptions" id="selectedPersonInput" value="@Model.AssignedPersonDisplayValue" placeholder="🔍 Buscar por nombre o CI..." required />
+                                <button type="button" id="btnPersonAction" class="btn btn-outline-success fw-bold text-nowrap" data-bs-toggle="modal" data-bs-target="#registerPersonModal">
+                                    ➕ Nueva
                                 </button>
+                                <datalist id="personsOptions">
+                                    @foreach (var p in Model.AllPersons)
+                                    {
+                                        <option value="@p.LastName (CI: @p.Identification)"
+                                                data-id="@p.Id"
+                                                data-lastname="@p.LastName"
+                                                data-identification="@p.Identification"
+                                                data-numbers="@p.Numbers"
+                                                data-positionid="@p.PositionId"
+                                                data-dependenceid="@p.DependenceId"
+                                                data-active="@p.Active">
+                                        </option>
+                                    }
+                                </datalist>
+                                <input type="hidden" asp-for="SelectedPersonId" id="SelectedPersonId" />
                             </div>
                         </div>
-                    </form>
+
+                        <div class="col-md-6">
+                            <label asp-for="Localization" class="form-label fw-bold text-success">📍 Departamento de Destino</label>
+                            <select asp-for="Localization" class="form-select" required>
+                                <option value="">-- Seleccione un Departamento --</option>
+                                @foreach (var depto in Model.DepartamentosBolivia)
+                                {
+                                    <option value="@depto">@depto</option>
+                                }
+                            </select>
+                        </div>
+
+                        <div class="col-12">
+                            <label asp-for="AssignmentComment" class="form-label fw-bold text-success">💬 Comentario de Entrega / Estado de la Máquina</label>
+                            <textarea asp-for="AssignmentComment" class="form-control" rows="2" placeholder="Ej. Se entrega en buen estado con todos sus accesorios..."></textarea>
+                        </div>
+                    </div>
                 </div>
 
-                <form method="post" asp-page-handler="ModifyDetails">
-                    <input type="hidden" name="id" value="@Model.Id" />
-                    <input type="hidden" name="mode" value="details" />
-
-                    <div class="card bg-light border-0 p-3 mb-4 shadow-sm">
-                        <div class="d-flex justify-content-between align-items-center mb-3">
-                            <h5 class="mb-0 text-secondary">📦 Lista de Componentes y Detalles (@Model.AllChecklistItems.Count)</h5>
+                <div class="card bg-light border-0 p-4 mb-4 shadow-sm">
+                    <h5 class="mb-3 text-success">➕ Registrar Complemento / Elemento</h5>
+                    <div class="row g-3 align-items-center">
+                        <div class="col-md-6">
+                            <input type="text" asp-for="NewCatalogDetailName" class="form-control" placeholder="Nombre (Ej. Procesador, Mouse)" />
                         </div>
-                        <div class="mb-3">
-                            <input type="text" id="searchFilter" class="form-control" placeholder="🔍 Buscar elemento..." />
+                        <div class="col-md-4">
+                            <div class="form-check mt-2">
+                                <input type="checkbox" asp-for="NewCatalogIsComplement" class="form-check-input" id="isComplementCheckAssign" />
+                                <label class="form-check-label fw-bold small" for="isComplementCheckAssign">¿Es un Complemento?</label>
+                            </div>
                         </div>
-                        <div class="table-responsive">
-                            <table class="table table-hover align-middle search-table">
-                                <thead class="table-light">
-                                    <tr>
-                                        <th style="width: 12%;">Seleccionar</th>
-                                        <th style="width: 30%;">Elemento</th>
-                                        <th style="width: 12%;">Cantidad</th>
-                                        <th style="width: 34%;">Observaciones / Serie</th>
-                                        <th style="width: 12%;" class="text-center">Gestión Catálogo</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    @{
-                                        var sortedDetailsItems = Model.AllChecklistItems.OrderBy(x => x.Complement).ToList();
-                                    }
-                                    @for (int i = 0; i < sortedDetailsItems.Count; i++)
-                                    {
-                                        var item = sortedDetailsItems[i];
-                                        <tr class="searchable-row">
-                                            <td>
-                                                <input type="hidden" name="AllChecklistItems[@i].DetailsId" value="@item.DetailsId" />
-                                                <input type="hidden" name="AllChecklistItems[@i].DetailName" value="@item.DetailName" />
-                                                <input type="hidden" name="AllChecklistItems[@i].Complement" value="@item.Complement.ToString().ToLower()" />
+                        <div class="col-md-2 text-end">
+                            <button type="submit" asp-page-handler="RegisterCatalogItem" class="btn btn-success w-100 fw-bold">
+                                + Registrar
+                            </button>
+                        </div>
+                    </div>
+                </div>
 
-                                                @if (!item.Complement)
-                                                {
-                                                    <input type="checkbox" name="AllChecklistItems[@i].IsSelected" value="true" class="form-check-input checklist-checkbox" @(item.IsSelected ? "checked" : "") />
-                                                }
-                                                else
-                                                {
-                                                    <span class="text-muted">-</span>
-                                                    <input type="hidden" name="AllChecklistItems[@i].IsSelected" value="false" />
-                                                }
-                                            </td>
-                                            <td>
-                                                <strong class="item-name">@item.DetailName</strong>
-                                                @if (!item.Complement)
-                                                {
-                                                    <span class="badge bg-success ms-2" style="font-size: 0.70rem;">(Principal)</span>
-                                                }
-                                            </td>
-                                            <td>
+                <div class="card bg-light border-0 p-3 mb-4 shadow-sm">
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <h5 class="mb-0 text-secondary">📦 Lista de Complementos y Elementos (@Model.AllChecklistItems.Count)</h5>
+                    </div>
+                    <div class="mb-3">
+                        <input type="text" id="searchFilterAssign" class="form-control" placeholder="🔍 Buscar elemento..." />
+                    </div>
+                    <div class="table-responsive">
+                        <table class="table table-hover align-middle search-table-assign">
+                            <thead class="table-light">
+                                <tr>
+                                    <th style="width: 12%;">Seleccionar</th>
+                                    <th style="width: 30%;">Elemento</th>
+                                    <th style="width: 12%;">Cantidad</th>
+                                    <th style="width: 34%;">Observaciones / Serie</th>
+                                    <th style="width: 12%;" class="text-center">Gestión Catálogo</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @{
+                                    var sortedItems = Model.AllChecklistItems.OrderBy(x => x.Complement).ToList();
+                                }
+                                @for (int i = 0; i < sortedItems.Count; i++)
+                                {
+                                    var item = sortedItems[i];
+                                    <tr class="searchable-row-assign">
+                                        <td>
+                                            <input type="hidden" name="AllChecklistItems[@i].DetailsId" value="@item.DetailsId" />
+                                            <input type="hidden" name="AllChecklistItems[@i].DetailName" value="@item.DetailName" />
+                                            <input type="hidden" name="AllChecklistItems[@i].Complement" value="@item.Complement.ToString().ToLower()" />
+
+                                            @if (item.Complement)
+                                            {
+                                                <input type="checkbox" name="AllChecklistItems[@i].IsSelected" value="true" class="form-check-input checklist-checkbox" @(item.IsSelected ? "checked" : "") />
+                                            }
+                                            else
+                                            {
+                                                <span class="text-muted">-</span>
+                                                <input type="hidden" name="AllChecklistItems[@i].IsSelected" value="false" />
+                                            }
+                                        </td>
+                                        <td>
+                                            <strong class="item-name-assign">@item.DetailName</strong>
+                                            @if (item.Complement)
+                                            {
+                                                <span class="badge bg-secondary ms-2" style="font-size: 0.70rem;">(Complemento)</span>
+                                            }
+                                            else
+                                            {
+                                                <span class="badge bg-success ms-2" style="font-size: 0.70rem;">(Principal)</span>
+                                            }
+                                        </td>
+                                        <td>
+                                            @if (item.Complement)
+                                            {
+                                                <input type="number" name="AllChecklistItems[@i].Amount" value="@item.Amount" class="form-control form-control-sm input-amount" min="1" style="max-width: 100px;" @(item.IsSelected ? "" : "disabled") />
+                                            }
+                                            else
+                                            {
                                                 <span class="text-muted">-</span>
                                                 <input type="hidden" name="AllChecklistItems[@i].Amount" value="1" />
-                                            </td>
-                                            <td>
-                                                <input type="text" name="AllChecklistItems[@i].DetailsValue" value="@item.DetailsValue" class="form-control form-control-sm input-details" placeholder="Ej. Ryzen 3, 8 GB..." @(!item.Complement && item.IsSelected ? "" : "disabled") />
-                                            </td>
-                                            <td class="text-center">
-                                                @if (!item.Complement)
-                                                {
-                                                    <div class="btn-group" role="group">
-                                                        <button type="button" class="btn btn-sm btn-outline-warning btn-edit-catalog"
-                                                                data-id="@item.DetailsId"
-                                                                data-name="@item.DetailName"
-                                                                data-iscomplement="false"
-                                                                title="Modificar">
-                                                            ✏️
-                                                        </button>
-                                                        <button type="submit" asp-page-handler="DeleteCatalogItem" asp-route-detailId="@item.DetailsId"
-                                                                class="btn btn-sm btn-outline-danger"
-                                                                onclick="return confirm('¿Estás seguro de eliminar este elemento del catálogo?');"
-                                                                title="Eliminar">
-                                                            🗑️
-                                                        </button>
-                                                    </div>
-                                                }
-                                                else
-                                                {
-                                                    <span class="text-muted">-</span>
-                                                }
-                                            </td>
-                                        </tr>
-                                    }
-                                </tbody>
-                            </table>
-                        </div>
+                                            }
+                                        </td>
+                                        <td>
+                                            @if (item.Complement)
+                                            {
+                                                <input type="text" name="AllChecklistItems[@i].DetailsValue" value="@item.DetailsValue" class="form-control form-control-sm input-details" placeholder="Ej. Serie, marca..." @(item.IsSelected ? "" : "disabled") />
+                                            }
+                                            else
+                                            {
+                                                <span class="text-dark">@(string.IsNullOrEmpty(item.DetailsValue) ? "-" : item.DetailsValue)</span>
+                                                <input type="hidden" name="AllChecklistItems[@i].DetailsValue" value="@item.DetailsValue" />
+                                            }
+                                        </td>
+                                        <td class="text-center">
+                                            @if (item.Complement)
+                                            {
+                                                <div class="btn-group" role="group">
+                                                    <button type="button" class="btn btn-sm btn-outline-warning btn-edit-catalog"
+                                                            data-id="@item.DetailsId"
+                                                            data-name="@item.DetailName"
+                                                            data-iscomplement="true"
+                                                            title="Modificar">
+                                                        ✏️
+                                                    </button>
+                                                    <button type="submit" asp-page-handler="DeleteCatalogItem" asp-route-detailId="@item.DetailsId"
+                                                            class="btn btn-sm btn-outline-danger"
+                                                            onclick="return confirm('¿Estás seguro de eliminar este elemento del catálogo?');"
+                                                            title="Eliminar">
+                                                        🗑️
+                                                    </button>
+                                                </div>
+                                            }
+                                            else
+                                            {
+                                                <span class="text-muted">-</span>
+                                            }
+                                        </td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
                     </div>
+                </div>
 
-                    <div class="d-flex justify-content-between align-items-center mt-4">
-                        <button type="submit" class="btn btn-primary px-5 py-2 fw-bold shadow-sm">
-                            Modificar Detalles
-                        </button>
-                    </div>
-                </form>
-            }
+                <div class="d-flex justify-content-between align-items-center mt-4">
+                    <button type="submit" asp-page-handler="SaveAssign" class="btn @(Model.IsAlreadyAssigned ? "btn-warning" : "btn-success") fw-bold">
+                        💾 @(Model.IsAlreadyAssigned ? "Modificar Asignación" : "Guardar Asignación")
+                    </button>
+                </div>
+            </form>
 
         </div>
     </div>
 </div>
 
-@if (isAssignMode)
-{
-    <!-- MODAL PRINCIPAL: REGISTRO / EDICIÓN DE PERSONA -->
-    <div class="modal fade" id="registerPersonModal" tabindex="-1" aria-hidden="true">
-        <div class="modal-dialog">
-            <div class="modal-content">
-                <form method="post" id="personFormModal" asp-page-handler="RegisterPerson">
-                    <input type="hidden" name="id" value="@Model.Id" />
-                    <input type="hidden" name="mode" value="assign" />
-                    <input type="hidden" id="ModalPersonId" asp-for="ModalPersonId" />
+<!-- MODAL PRINCIPAL: REGISTRO / EDICIÓN DE PERSONA -->
+<div class="modal fade" id="registerPersonModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <form method="post" id="personFormModal" asp-page-handler="RegisterPerson">
+                <input type="hidden" name="id" value="@Model.Id" />
+                <input type="hidden" id="ModalPersonId" asp-for="ModalPersonId" />
 
-                    <div class="modal-header bg-success text-white">
-                        <h5 class="modal-title" id="personModalTitle">Registrar Nueva Persona</h5>
-                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                <div class="modal-header bg-success text-white">
+                    <h5 class="modal-title" id="personModalTitle">Registrar Nueva Persona</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Apellido / Nombre</label>
+                        <input type="text" asp-for="ModalNewPersonLastName" id="ModalNewPersonLastName" class="form-control" placeholder="Ej. Pérez" required />
                     </div>
-                    <div class="modal-body">
-                        <div class="mb-3">
-                            <label class="form-label fw-bold">Apellido / Nombre</label>
-                            <input type="text" asp-for="ModalNewPersonLastName" id="ModalNewPersonLastName" class="form-control" placeholder="Ej. Pérez" required />
-                        </div>
-                        <div class="mb-3">
-                            <label class="form-label fw-bold">Identificación (CI)</label>
-                            <input type="text" asp-for="ModalNewPersonIdentification" id="ModalNewPersonIdentification" class="form-control" placeholder="Ej. 1234567" required />
-                        </div>
-                        <div class="mb-3">
-                            <label class="form-label fw-bold">Número / Teléfono</label>
-                            <input type="text" asp-for="ModalNewPersonNumbers" id="ModalNewPersonNumbers" class="form-control" placeholder="Ej. 70000000" />
-                        </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Identificación (CI)</label>
+                        <input type="text" asp-for="ModalNewPersonIdentification" id="ModalNewPersonIdentification" class="form-control" placeholder="Ej. 1234567" required />
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Número / Teléfono</label>
+                        <input type="text" asp-for="ModalNewPersonNumbers" id="ModalNewPersonNumbers" class="form-control" placeholder="Ej. 70000000" />
+                    </div>
 
-                        <!-- CARGO -->
-                        <div class="mb-3">
-                            <label class="form-label fw-bold">Cargo (Position)</label>
-                            <div class="input-group">
-                                <select asp-for="ModalNewPersonPositionId" id="ModalNewPersonPositionId" class="form-select">
-                                    <option value="">-- Seleccionar Cargo --</option>
-                                    @foreach (var pos in Model.AllPositions)
-                                    {
-                                        <option value="@pos.Id" data-name="@pos.PositionName">@pos.PositionName</option>
-                                    }
-                                </select>
-                                <button type="button" id="btnActionPosition" class="btn btn-outline-success fw-bold" title="Nuevo Cargo">
-                                    ➕
-                                </button>
-                            </div>
-                        </div>
-
-                        <!-- DEPENDENCIA -->
-                        <div class="mb-3">
-                            <label class="form-label fw-bold">Área / Dependencia (Dependence)</label>
-                            <div class="input-group">
-                                <select asp-for="ModalNewPersonDependenceId" id="ModalNewPersonDependenceId" class="form-select">
-                                    <option value="">-- Seleccionar Dependencia --</option>
-                                    @foreach (var dep in Model.AllDependences)
-                                    {
-                                        <option value="@dep.Id" data-name="@dep.DependenceName">@dep.DependenceName</option>
-                                    }
-                                </select>
-                                <button type="button" id="btnActionDependence" class="btn btn-outline-success fw-bold" title="Nueva Dependencia">
-                                    ➕
-                                </button>
-                            </div>
-                        </div>
-
-                        <div class="form-check mb-3">
-                            <input type="checkbox" asp-for="ModalNewPersonIsActive" id="ModalNewPersonIsActive" class="form-check-input" checked />
-                            <label class="form-check-label fw-bold" for="ModalNewPersonIsActive">Personal Activo</label>
+                    <!-- CARGO -->
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Cargo (Position)</label>
+                        <div class="input-group">
+                            <select asp-for="ModalNewPersonPositionId" id="ModalNewPersonPositionId" class="form-select">
+                                <option value="">-- Seleccionar Cargo --</option>
+                                @foreach (var pos in Model.AllPositions)
+                                {
+                                    <option value="@pos.Id" data-name="@pos.PositionName">@pos.PositionName</option>
+                                }
+                            </select>
+                            <button type="button" id="btnActionPosition" class="btn btn-outline-success fw-bold" title="Nuevo Cargo">
+                                ➕
+                            </button>
                         </div>
                     </div>
-                    <div class="modal-footer">
-                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
-                        <button type="submit" id="personModalSubmitBtn" class="btn btn-success">Guardar Persona</button>
+
+                    <!-- DEPENDENCIA -->
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Área / Dependencia (Dependence)</label>
+                        <div class="input-group">
+                            <select asp-for="ModalNewPersonDependenceId" id="ModalNewPersonDependenceId" class="form-select">
+                                <option value="">-- Seleccionar Dependencia --</option>
+                                @foreach (var dep in Model.AllDependences)
+                                {
+                                    <option value="@dep.Id" data-name="@dep.DependenceName">@dep.DependenceName</option>
+                                }
+                            </select>
+                            <button type="button" id="btnActionDependence" class="btn btn-outline-success fw-bold" title="Nueva Dependencia">
+                                ➕
+                            </button>
+                        </div>
                     </div>
-                </form>
-            </div>
+
+                    <div class="form-check mb-3">
+                        <input type="checkbox" asp-for="ModalNewPersonIsActive" id="ModalNewPersonIsActive" class="form-check-input" checked />
+                        <label class="form-check-label fw-bold" for="ModalNewPersonIsActive">Personal Activo</label>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" id="personModalSubmitBtn" class="btn btn-success">Guardar Persona</button>
+                </div>
+            </form>
         </div>
     </div>
+</div>
 
-    <!-- SUB-MODAL: CREAR / MODIFICAR CARGO (POSITION) -->
-    <div class="modal fade" id="registerPositionModal" tabindex="-1" aria-hidden="true">
-        <div class="modal-dialog modal-dialog-centered">
-            <div class="modal-content border-success shadow-lg">
-                <form id="formPositionModal" method="post" asp-page-handler="RegisterPosition">
-                    @Html.AntiForgeryToken()
-                    <input type="hidden" id="ModalPositionId" name="ModalPositionId" />
+<!-- SUB-MODAL: CREAR / MODIFICAR CARGO (POSITION) -->
+<div class="modal fade" id="registerPositionModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-success shadow-lg">
+            <form id="formPositionModal" method="post" asp-page-handler="RegisterPosition">
+                @Html.AntiForgeryToken()
+                <input type="hidden" id="ModalPositionId" name="ModalPositionId" />
 
-                    <div class="modal-header bg-success text-white">
-                        <h5 class="modal-title" id="positionModalTitle">➕ Agregar Nuevo Cargo</h5>
-                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                <div class="modal-header bg-success text-white">
+                    <h5 class="modal-title" id="positionModalTitle">➕ Agregar Nuevo Cargo</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Nombre del Cargo</label>
+                        <input type="text" id="NewPositionName" name="NewPositionName" class="form-control" placeholder="Ej. Administrador de Sistemas" required />
                     </div>
-                    <div class="modal-body">
-                        <div class="mb-3">
-                            <label class="form-label fw-bold">Nombre del Cargo</label>
-                            <input type="text" id="NewPositionName" name="NewPositionName" class="form-control" placeholder="Ej. Administrador de Sistemas" required />
-                        </div>
-                    </div>
-                    <div class="modal-footer">
-                        <button type="button" class="btn btn-secondary" id="btnCancelPositionModal">Cancelar</button>
-                        <button type="submit" id="btnSubmitPositionModal" class="btn btn-success fw-bold">Guardar Cargo</button>
-                    </div>
-                </form>
-            </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" id="btnCancelPositionModal">Cancelar</button>
+                    <button type="submit" id="btnSubmitPositionModal" class="btn btn-success fw-bold">Guardar Cargo</button>
+                </div>
+            </form>
         </div>
     </div>
+</div>
 
-    <!-- SUB-MODAL: CREAR / MODIFICAR DEPENDENCIA (DEPENDENCE) -->
-    <div class="modal fade" id="registerDependenceModal" tabindex="-1" aria-hidden="true">
-        <div class="modal-dialog modal-dialog-centered">
-            <div class="modal-content border-success shadow-lg">
-                <form id="formDependenceModal" method="post" asp-page-handler="RegisterDependence">
-                    @Html.AntiForgeryToken()
-                    <input type="hidden" id="ModalDependenceId" name="ModalDependenceId" />
+<!-- SUB-MODAL: CREAR / MODIFICAR DEPENDENCIA (DEPENDENCE) -->
+<div class="modal fade" id="registerDependenceModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-success shadow-lg">
+            <form id="formDependenceModal" method="post" asp-page-handler="RegisterDependence">
+                @Html.AntiForgeryToken()
+                <input type="hidden" id="ModalDependenceId" name="ModalDependenceId" />
 
-                    <div class="modal-header bg-success text-white">
-                        <h5 class="modal-title" id="dependenceModalTitle">➕ Agregar Nueva Área / Dependencia</h5>
-                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                <div class="modal-header bg-success text-white">
+                    <h5 class="modal-title" id="dependenceModalTitle">➕ Agregar Nueva Área / Dependencia</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Nombre del Área o Dependencia</label>
+                        <input type="text" id="NewDependenceName" name="NewDependenceName" class="form-control" placeholder="Ej. Departamento de TI" required />
                     </div>
-                    <div class="modal-body">
-                        <div class="mb-3">
-                            <label class="form-label fw-bold">Nombre del Área o Dependencia</label>
-                            <input type="text" id="NewDependenceName" name="NewDependenceName" class="form-control" placeholder="Ej. Departamento de TI" required />
-                        </div>
-                    </div>
-                    <div class="modal-footer">
-                        <button type="button" class="btn btn-secondary" id="btnCancelDependenceModal">Cancelar</button>
-                        <button type="submit" id="btnSubmitDependenceModal" class="btn btn-success fw-bold">Guardar Dependencia</button>
-                    </div>
-                </form>
-            </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" id="btnCancelDependenceModal">Cancelar</button>
+                    <button type="submit" id="btnSubmitDependenceModal" class="btn btn-success fw-bold">Guardar Dependencia</button>
+                </div>
+            </form>
         </div>
     </div>
-}
+</div>
 
-<!-- MODAL PARA EDITAR ELEMENTO DEL CATÁLOGO (AMBOS MODOS) -->
+<!-- MODAL PARA EDITAR ELEMENTO DEL CATÁLOGO -->
 <div class="modal fade" id="editCatalogItemModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content border-warning shadow-lg">
             <form method="post" asp-page-handler="RegisterCatalogItem">
                 <input type="hidden" name="id" value="@Model.Id" />
-                <input type="hidden" name="mode" value="@(isAssignMode ? "assign" : "details")" />
                 <input type="hidden" id="EditCatalogDetailId" name="EditCatalogDetailId" />
 
                 <div class="modal-header bg-warning text-dark">
@@ -525,7 +380,6 @@
 @section Scripts {
     <script>
         document.addEventListener('DOMContentLoaded', function () {
-            // Modales de Bootstrap
             const personModalEl = document.getElementById('registerPersonModal');
             const posModalEl = document.getElementById('registerPositionModal');
             const depModalEl = document.getElementById('registerDependenceModal');
@@ -538,7 +392,7 @@
 
             let shouldReturnToPerson = false;
 
-            // 1. Sincronización del Input de Persona y cambio dinámico del botón principal (#btnPersonAction)
+            // 1. Sincronización del Input de Persona y cambio dinámico del botón principal
             const personInput = document.getElementById('selectedPersonInput');
             const personIdInput = document.getElementById('SelectedPersonId');
             const datalist = document.getElementById('personsOptions');
@@ -546,7 +400,6 @@
 
             function updateMainPersonButton() {
                 if (!personInput || !btnPersonAction || !datalist) return;
-
                 const val = personInput.value.trim();
                 const options = datalist.querySelectorAll('option');
                 let found = false;
@@ -663,10 +516,7 @@
                     e.preventDefault();
                     const formData = new FormData(this);
 
-                    fetch(this.action, {
-                        method: 'POST',
-                        body: formData
-                    })
+                    fetch(this.action, { method: 'POST', body: formData })
                     .then(res => res.json())
                     .then(data => {
                         if (data.success) {
@@ -743,10 +593,7 @@
                     e.preventDefault();
                     const formData = new FormData(this);
 
-                    fetch(this.action, {
-                        method: 'POST',
-                        body: formData
-                    })
+                    fetch(this.action, { method: 'POST', body: formData })
                     .then(res => res.json())
                     .then(data => {
                         if (data.success) {
@@ -793,7 +640,6 @@
             // 6. Control de apertura/retorno de modales
             function setupReturnControl(subModalEl, cancelBtnId) {
                 if (!subModalEl) return;
-
                 const cancelBtn = document.getElementById(cancelBtnId);
                 if (cancelBtn) {
                     cancelBtn.addEventListener('click', function () {
@@ -801,7 +647,6 @@
                         if (instance) instance.hide();
                     });
                 }
-
                 subModalEl.addEventListener('hidden.bs.modal', function () {
                     if (shouldReturnToPerson) {
                         shouldReturnToPerson = false;
@@ -814,16 +659,13 @@
             setupReturnControl(depModalEl, 'btnCancelDependenceModal');
 
             // 7. Filtro de Búsqueda
-            function setupSearch(inputId, rowClass, nameClass) {
-                const searchInput = document.getElementById(inputId);
-                if (!searchInput) return;
-
+            const searchInput = document.getElementById('searchFilterAssign');
+            if (searchInput) {
                 searchInput.addEventListener('keyup', function () {
                     const filter = this.value.toLowerCase();
-                    const rows = document.querySelectorAll('.' + rowClass);
-
+                    const rows = document.querySelectorAll('.searchable-row-assign');
                     rows.forEach(row => {
-                        const nameEl = row.querySelector('.' + nameClass);
+                        const nameEl = row.querySelector('.item-name-assign');
                         if (nameEl) {
                             const text = nameEl.textContent || nameEl.innerText;
                             row.style.display = text.toLowerCase().includes(filter) ? '' : 'none';
@@ -831,9 +673,6 @@
                     });
                 });
             }
-
-            setupSearch('searchFilterAssign', 'searchable-row-assign', 'item-name-assign');
-            setupSearch('searchFilter', 'searchable-row', 'item-name');
 
             // 8. Habilitar/Deshabilitar inputs según Checkbox
             document.querySelectorAll('.checklist-checkbox').forEach(chk => {

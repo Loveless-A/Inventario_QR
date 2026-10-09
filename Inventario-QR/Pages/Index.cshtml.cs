@@ -38,8 +38,10 @@ namespace Inventario_QR.Pages
         [BindProperty(SupportsGet = true)]
         public int CurrentPage { get; set; } = 1;
 
+        [BindProperty(SupportsGet = true)]
+        public int PageSize { get; set; } = 10; // Hacemos dinámico el tamaño de página
+
         public int TotalPages { get; set; } = 1;
-        public int PageSize { get; set; } = 10;
 
         [BindProperty]
         public List<int> SelectedProductIds { get; set; } = new();
@@ -68,7 +70,6 @@ namespace Inventario_QR.Pages
                 if (isAssigned && characteristic?.Person != null)
                 {
                     var person = characteristic.Person;
-                    // Usamos estrictamente las propiedades reales: Identification y LastName
                     assignedName = $"{person.Identification} - {person.LastName}".Trim();
                     if (string.IsNullOrEmpty(assignedName) || assignedName == "-") assignedName = "Asignado";
                 }
@@ -85,7 +86,6 @@ namespace Inventario_QR.Pages
                 });
             }
 
-            // El filtro busca en Código, QR, Nombre del Producto y en la Información del Propietario (AssignedToName)
             if (!string.IsNullOrWhiteSpace(SearchTerm))
             {
                 var term = SearchTerm.Trim().ToLower();
@@ -95,6 +95,13 @@ namespace Inventario_QR.Pages
                     p.ProductName.ToLower().Contains(term) ||
                     p.AssignedToName.ToLower().Contains(term)
                 ).ToList();
+            }
+
+            // Validar que el PageSize sea uno de los permitidos por seguridad
+            int[] allowedSizes = { 10, 20, 30, 50, 100 };
+            if (!allowedSizes.Contains(PageSize))
+            {
+                PageSize = 10;
             }
 
             int totalItems = vmList.Count;
@@ -113,7 +120,7 @@ namespace Inventario_QR.Pages
         {
             if (SelectedProductIds == null || !SelectedProductIds.Any())
             {
-                return RedirectToPage(new { CurrentPage, SearchTerm });
+                return RedirectToPage(new { CurrentPage, SearchTerm, PageSize });
             }
 
             string ids = string.Join(",", SelectedProductIds);

@@ -4,64 +4,159 @@
     ViewData["Title"] = "Registrar Producto";
 }
 
-<div class="container mt-4" style="max-width: 600px;">
-    <div class="card shadow-sm border-0">
+<div class="container-fluid mt-4 px-4 mb-5">
+    <div class="card shadow border-0 rounded-3">
+        <div class="card-header bg-white py-3 border-bottom">
+            <h3 class="mb-0 text-dark fw-bold">Registrar Nuevo Producto</h3>
+        </div>
         <div class="card-body p-4">
-            <h3 class="mb-4">Registrar Nuevo Producto</h3>
-
             <form method="post">
                 @Html.AntiForgeryToken()
-                <!-- Muestra un resumen general de errores si ModelState falla -->
                 <div asp-validation-summary="All" class="text-danger mb-3"></div>
 
-                <!-- SELECT CATEGORÍA -->
-                <div class="mb-3">
-                    <label asp-for="Product.CategoryId" class="form-label">Categoría</label>
-                    <div class="input-group">
-                        <select id="categorySelect" asp-for="Product.CategoryId" asp-items="Model.CategoriesSL" class="form-select" required>
-                            <option value="">-- Seleccionar Categoría --</option>
-                        </select>
-                        <button type="button" id="btnCategoryModal" class="btn btn-outline-primary" data-bs-toggle="modal" data-bs-target="#modalCategory">
-                            + Nueva
-                        </button>
+                <!-- DISEÑO EN DOS COLUMNAS (LADO A LADO) -->
+                <div class="row g-4">
+
+                    <!-- COLUMNA IZQUIERDA: Formulario Principal -->
+                    <div class="col-lg-6">
+                        <div class="card bg-light border-0 p-4 h-100 shadow-sm">
+                            <h5 class="mb-3 text-primary fw-bold">📝 Datos Generales</h5>
+
+                            <!-- SELECT CATEGORÍA -->
+                            <div class="mb-3">
+                                <label asp-for="Product.CategoryId" class="form-label fw-bold">Categoría</label>
+                                <div class="input-group">
+                                    <select id="categorySelect" asp-for="Product.CategoryId" asp-items="Model.CategoriesSL" class="form-select" required>
+                                        <option value="">-- Seleccionar Categoría --</option>
+                                    </select>
+                                    <button type="button" id="btnCategoryModal" class="btn btn-outline-primary fw-bold" data-bs-toggle="modal" data-bs-target="#modalCategory">
+                                        + Nueva
+                                    </button>
+                                </div>
+                                <span asp-validation-for="Product.CategoryId" class="text-danger"></span>
+                            </div>
+
+                            <!-- CÓDIGO DE INVENTARIO -->
+                            <div class="mb-3">
+                                <label asp-for="Product.Code" class="form-label fw-bold">Código de Inventario</label>
+                                <input id="productCode" asp-for="Product.Code" class="form-control" placeholder="Ej. LAP-001" required />
+                                <span asp-validation-for="Product.Code" class="text-danger"></span>
+                            </div>
+
+                            <!-- NOMBRE DEL PRODUCTO -->
+                            <div class="mb-3">
+                                <label asp-for="Product.ProductName" class="form-label fw-bold">Nombre / Descripción del Producto</label>
+                                <input asp-for="Product.ProductName" class="form-control" placeholder="Ej. Laptop Lenovo ThinkPad E14" required />
+                                <span asp-validation-for="Product.ProductName" class="text-danger"></span>
+                            </div>
+
+                            <!-- IDENTIFICADOR QR -->
+                            <div class="mb-3">
+                                <label asp-for="Product.Qr" class="form-label fw-bold">Identificador QR Único</label>
+                                <input asp-for="Product.Qr" class="form-control bg-white" readonly />
+                                <small class="text-muted">Autogenerado por el sistema para la etiqueta física.</small>
+                            </div>
+
+                            <!-- ESTADO ACTIVO -->
+                            <div class="mb-3 form-check mt-3">
+                                <input asp-for="Product.Active" class="form-check-input" />
+                                <label asp-for="Product.Active" class="form-check-label fw-bold">Producto Activo</label>
+                            </div>
+                        </div>
                     </div>
-                    <span asp-validation-for="Product.CategoryId" class="text-danger"></span>
+
+                    <!-- COLUMNA DERECHA: Solo Detalles Principales -->
+                    <div class="col-lg-6">
+                        <div class="card bg-light border-0 p-4 h-100 shadow-sm">
+                            <div class="d-flex justify-content-between align-items-center mb-3">
+                                <h5 class="mb-0 text-success fw-bold">📦 Detalles Principales del Producto</h5>
+                                <button type="button" id="btnAddCatalogModal" class="btn btn-outline-success btn-sm fw-bold" data-bs-toggle="modal" data-bs-target="#modalAddCatalogItem">
+                                    ➕ Nuevo Detalle
+                                </button>
+                            </div>
+                            <p class="text-muted small mb-3">Seleccione y configure los detalles técnicos esenciales que corresponden a este producto.</p>
+
+                            <div class="table-responsive bg-white rounded shadow-sm border" style="max-height: 380px; overflow-y: auto;">
+                                <table class="table table-hover align-middle mb-0">
+                                    <thead class="table-light sticky-top">
+                                        <tr>
+                                            <th style="width: 12%;" class="text-center">Sel.</th>
+                                            <th style="width: 35%;">Detalle</th>
+                                            <th style="width: 38%;">Observaciones / Serie</th>
+                                            <th style="width: 15%;" class="text-center">Acciones</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="catalogItemsTableBody">
+                                        @{
+                                            var mainItems = Model.AllCatalogItems.Select((item, index) => new { item, index }).Where(x => !x.item.Complement).ToList();
+                                        }
+
+                                        @if (mainItems.Any())
+                                        {
+                                            @foreach (var entry in mainItems)
+                                            {
+                                                var item = entry.item;
+                                                var i = entry.index;
+                                                <tr data-detail-id="@item.DetailsId">
+                                                    <td class="text-center">
+                                                        <input type="hidden" name="SelectedCatalogItems[@i].DetailsId" value="@item.DetailsId" />
+                                                        <input type="hidden" name="SelectedCatalogItems[@i].DetailName" class="item-name-hidden" value="@item.DetailName" />
+                                                        <input type="hidden" name="SelectedCatalogItems[@i].Complement" value="false" />
+                                                        <input type="hidden" name="SelectedCatalogItems[@i].Amount" value="1" />
+
+                                                        <input type="checkbox" name="SelectedCatalogItems[@i].IsSelected" value="true" class="form-check-input checklist-checkbox" @(item.IsSelected ? "checked" : "") />
+                                                    </td>
+                                                    <td>
+                                                        <strong class="text-dark item-name-text">@item.DetailName</strong>
+                                                    </td>
+                                                    <td>
+                                                        <input type="text" name="SelectedCatalogItems[@i].DetailsValue" value="@item.DetailsValue" class="form-control form-control-sm input-details" placeholder="Ej. Procesador, 8GB RAM..." @(item.IsSelected ? "" : "disabled") />
+                                                    </td>
+                                                    <td class="text-center">
+                                                        <div class="btn-group" role="group">
+                                                            <button type="button" class="btn btn-sm btn-outline-warning btn-edit-catalog"
+                                                                    data-id="@item.DetailsId"
+                                                                    data-name="@item.DetailName"
+                                                                    title="Modificar Detalle">
+                                                                ✏️
+                                                            </button>
+                                                            <button type="button" class="btn btn-sm btn-outline-danger btn-delete-catalog"
+                                                                    data-id="@item.DetailsId"
+                                                                    title="Eliminar Detalle">
+                                                                🗑️
+                                                            </button>
+                                                        </div>
+                                                    </td>
+                                                </tr>
+                                            }
+                                        }
+                                        else
+                                        {
+                                            <tr id="emptyCatalogRow">
+                                                <td colspan="4" class="text-center py-4 text-muted small">
+                                                    No hay detalles principales registrados en el catálogo.
+                                                </td>
+                                            </tr>
+                                        }
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+
                 </div>
 
-                <!-- CÓDIGO DE INVENTARIO -->
-                <div class="mb-3">
-                    <label asp-for="Product.Code" class="form-label">Código de Inventario</label>
-                    <input id="productCode" asp-for="Product.Code" class="form-control" placeholder="Ej. LAP-001" required />
-                    <span asp-validation-for="Product.Code" class="text-danger"></span>
-                </div>
-
-                <div class="mb-3">
-                    <label asp-for="Product.ProductName" class="form-label">Nombre / Descripción del Producto</label>
-                    <input asp-for="Product.ProductName" class="form-control" placeholder="Ej. Laptop Lenovo ThinkPad E14" required />
-                    <span asp-validation-for="Product.ProductName" class="text-danger"></span>
-                </div>
-
-                <div class="mb-3">
-                    <label asp-for="Product.Qr" class="form-label">Identificador QR Único</label>
-                    <input asp-for="Product.Qr" class="form-control bg-light" readonly />
-                    <small class="text-muted">Autogenerado por el sistema para la etiqueta física.</small>
-                </div>
-
-                <div class="mb-3 form-check">
-                    <input asp-for="Product.Active" class="form-check-input" />
-                    <label asp-for="Product.Active" class="form-check-label">Producto Activo</label>
-                </div>
-
-                <div class="d-flex justify-content-between align-items-center mt-4">
-                    <a asp-page="./Index" class="btn btn-outline-secondary btn-sm">Cancelar</a>
-                    <button type="submit" class="btn btn-primary btn-sm">Guardar Producto</button>
+                <!-- BOTONES DE ACCIÓN INFERIORES -->
+                <div class="d-flex justify-content-between align-items-center mt-4 pt-3 border-top">
+                    <a asp-page="./Index" class="btn btn-outline-secondary">Cancelar</a>
+                    <button type="submit" class="btn btn-primary px-5 fw-bold shadow-sm">Guardar Producto</button>
                 </div>
             </form>
         </div>
     </div>
 </div>
 
-<!-- MODAL HÍBRIDO (CREAR / EDITAR CATEGORÍA) -->
+<!-- MODAL: CREAR / EDITAR CATEGORÍA -->
 <div class="modal fade" id="modalCategory" tabindex="-1" aria-labelledby="modalCategoryTitle" aria-hidden="true">
     <div class="modal-dialog">
         <div class="modal-content">
@@ -71,19 +166,18 @@
             </div>
             <div class="modal-body">
                 <div id="modalAlert" class="alert alert-danger d-none" role="alert"></div>
-
                 <input type="hidden" id="catId" value="0" />
 
                 <div class="mb-3">
-                    <label for="catName" class="form-label">Nombre de Categoría</label>
-                    <input type="text" id="catName" class="form-control" placeholder="Ej. Computadoras, Sillas, Muebles" />
+                    <label for="catName" class="form-label fw-bold">Nombre de Categoría</label>
+                    <input type="text" id="catName" class="form-control" placeholder="Ej. Computadoras, Sillas" />
                 </div>
                 <div class="mb-3">
-                    <label for="catAbbr" class="form-label">Abreviatura (para el código)</label>
-                    <input type="text" id="catAbbr" class="form-control" placeholder="Ej. COMP, SIL, MUE" maxlength="5" style="text-transform:uppercase;" />
+                    <label for="catAbbr" class="form-label fw-bold">Abreviatura (para el código)</label>
+                    <input type="text" id="catAbbr" class="form-control" placeholder="Ej. COMP, SIL" maxlength="5" style="text-transform:uppercase;" />
                 </div>
                 <div class="mb-3">
-                    <label for="catComment" class="form-label">Comentario (Opcional)</label>
+                    <label for="catComment" class="form-label fw-bold">Comentario (Opcional)</label>
                     <textarea id="catComment" class="form-control" rows="2"></textarea>
                 </div>
             </div>
@@ -95,14 +189,195 @@
     </div>
 </div>
 
+<!-- MODAL HÍBRIDO: REGISTRAR / MODIFICAR DETALLE PRINCIPAL -->
+<div class="modal fade" id="modalAddCatalogItem" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-success shadow">
+            <div class="modal-header bg-success text-white">
+                <h5 class="modal-title fw-bold" id="catalogModalTitle">➕ Registrar Detalle Principal</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+            </div>
+            <div class="modal-body">
+                <div id="modalCatalogAlert" class="alert alert-danger d-none" role="alert"></div>
+                <input type="hidden" id="modalCatalogId" value="0" />
+
+                <div class="mb-3">
+                    <label class="form-label fw-bold">Nombre del Detalle</label>
+                    <input type="text" id="newCatalogName" class="form-control" placeholder="Ej. Procesador, Almacenamiento..." />
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Cancelar</button>
+                <button type="button" id="btnSaveCatalogItemAjax" class="btn btn-success btn-sm fw-bold">Guardar Detalle</button>
+            </div>
+        </div>
+    </div>
+</div>
+
 @section Scripts {
     <partial name="_ValidationScriptsPartial" />
     <script>
         document.addEventListener('DOMContentLoaded', function () {
+            // Habilitar / Deshabilitar inputs de detalles al marcar el checkbox
+            document.querySelectorAll('.checklist-checkbox').forEach(chk => {
+                chk.addEventListener('change', function () {
+                    const row = this.closest('tr');
+                    const textInput = row.querySelector('.input-details');
+                    if (textInput) textInput.disabled = !this.checked;
+                });
+            });
+
+            // Preparar modal para Nuevo Detalle
+            const btnAddCatalogModal = document.getElementById('btnAddCatalogModal');
+            if (btnAddCatalogModal) {
+                btnAddCatalogModal.addEventListener('click', function () {
+                    document.getElementById('catalogModalTitle').textContent = '➕ Registrar Detalle Principal';
+                    document.getElementById('modalCatalogId').value = '0';
+                    document.getElementById('newCatalogName').value = '';
+                    document.getElementById('modalCatalogAlert').classList.add('d-none');
+                });
+            }
+
+            // Delegación de eventos para Modificar y Borrar elementos del catálogo directamente desde la tabla
+            const catalogTableBody = document.getElementById('catalogItemsTableBody');
+            if (catalogTableBody) {
+                catalogTableBody.addEventListener('click', function (e) {
+                    // Botón Editar
+                    const editBtn = e.target.closest('.btn-edit-catalog');
+                    if (editBtn) {
+                        const id = editBtn.getAttribute('data-id');
+                        const name = editBtn.getAttribute('data-name');
+
+                        document.getElementById('catalogModalTitle').textContent = '✏️ Modificar Detalle Principal';
+                        document.getElementById('modalCatalogId').value = id;
+                        document.getElementById('newCatalogName').value = name;
+                        document.getElementById('modalCatalogAlert').classList.add('d-none');
+
+                        const modal = new bootstrap.Modal(document.getElementById('modalAddCatalogItem'));
+                        modal.show();
+                    }
+
+                    // Botón Eliminar
+                    const deleteBtn = e.target.closest('.btn-delete-catalog');
+                    if (deleteBtn) {
+                        const id = deleteBtn.getAttribute('data-id');
+                        if (confirm('¿Está seguro de eliminar este detalle del catálogo?')) {
+                            deleteCatalogItem(id);
+                        }
+                    }
+                });
+            }
+
+            // Guardar o Actualizar Detalle vía AJAX (Modal)
+            const btnSaveCatalogItemAjax = document.getElementById('btnSaveCatalogItemAjax');
+            if (btnSaveCatalogItemAjax) {
+                btnSaveCatalogItemAjax.addEventListener('click', async function () {
+                    const id = parseInt(document.getElementById('modalCatalogId').value) || 0;
+                    const name = document.getElementById('newCatalogName').value.trim();
+                    const alertDiv = document.getElementById('modalCatalogAlert');
+
+                    if (!name) {
+                        alertDiv.textContent = 'El nombre del detalle es obligatorio.';
+                        alertDiv.classList.remove('d-none');
+                        return;
+                    }
+                    alertDiv.classList.add('d-none');
+
+                    const handlerUrl = id > 0 ? '?handler=UpdateCatalogItem' : '?handler=RegisterCatalogItem';
+
+                    try {
+                        const response = await fetch(handlerUrl, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ Id: id, DetailName: name })
+                        });
+
+                        if (response.ok) {
+                            const data = await response.json();
+
+                            if (id > 0) {
+                                // Actualizar fila existente en la tabla
+                                const row = catalogTableBody.querySelector(`tr[data-detail-id="${id}"]`);
+                                if (row) {
+                                    row.querySelector('.item-name-text').textContent = data.name;
+                                    row.querySelector('.item-name-hidden').value = data.name;
+                                    row.querySelector('.btn-edit-catalog').setAttribute('data-name', data.name);
+                                }
+                            } else {
+                                // Agregar nueva fila a la tabla
+                                const emptyRow = document.getElementById('emptyCatalogRow');
+                                if (emptyRow) emptyRow.remove();
+
+                                const index = catalogTableBody.rows.length;
+                                const tr = document.createElement('tr');
+                                tr.setAttribute('data-detail-id', data.id);
+                                tr.innerHTML = `
+                                    <td class="text-center">
+                                        <input type="hidden" name="SelectedCatalogItems[${index}].DetailsId" value="${data.id}" />
+                                        <input type="hidden" name="SelectedCatalogItems[${index}].DetailName" class="item-name-hidden" value="${data.name}" />
+                                        <input type="hidden" name="SelectedCatalogItems[${index}].Complement" value="false" />
+                                        <input type="hidden" name="SelectedCatalogItems[${index}].Amount" value="1" />
+                                        <input type="checkbox" name="SelectedCatalogItems[${index}].IsSelected" value="true" class="form-check-input checklist-checkbox" checked />
+                                    </td>
+                                    <td>
+                                        <strong class="text-dark item-name-text">${data.name}</strong>
+                                    </td>
+                                    <td>
+                                        <input type="text" name="SelectedCatalogItems[${index}].DetailsValue" value="" class="form-control form-control-sm input-details" placeholder="Ej. Procesador, memoria..." />
+                                    </td>
+                                    <td class="text-center">
+                                        <div class="btn-group" role="group">
+                                            <button type="button" class="btn btn-sm btn-outline-warning btn-edit-catalog" data-id="${data.id}" data-name="${data.name}" title="Modificar Detalle">✏️</button>
+                                            <button type="button" class="btn btn-sm btn-outline-danger btn-delete-catalog" data-id="${data.id}" title="Eliminar Detalle">🗑️</button>
+                                        </div>
+                                    </td>
+                                `;
+                                catalogTableBody.appendChild(tr);
+
+                                const newChk = tr.querySelector('.checklist-checkbox');
+                                newChk.addEventListener('change', function () {
+                                    const row = this.closest('tr');
+                                    row.querySelector('.input-details').disabled = !this.checked;
+                                });
+                            }
+
+                            bootstrap.Modal.getInstance(document.getElementById('modalAddCatalogItem')).hide();
+                        } else {
+                            const err = await response.json();
+                            alertDiv.textContent = err.message || 'Error al procesar la solicitud.';
+                            alertDiv.classList.remove('d-none');
+                        }
+                    } catch (err) {
+                        alertDiv.textContent = 'Error de conexión.';
+                        alertDiv.classList.remove('d-none');
+                    }
+                });
+            }
+
+            // Función para eliminar detalle por AJAX
+            async function deleteCatalogItem(id) {
+                try {
+                    const response = await fetch('?handler=DeleteCatalogItem', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ Id: id })
+                    });
+
+                    if (response.ok) {
+                        const row = catalogTableBody.querySelector(`tr[data-detail-id="${id}"]`);
+                        if (row) row.remove();
+                    } else {
+                        alert('No se pudo eliminar el detalle.');
+                    }
+                } catch (err) {
+                    alert('Error de conexión al eliminar.');
+                }
+            }
+
+            // Lógica existente para categorías y códigos automáticos...
             const categorySelect = document.getElementById('categorySelect');
             const productCode = document.getElementById('productCode');
             const btnCategoryModal = document.getElementById('btnCategoryModal');
-
             const initialCategories = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.CategoryList));
 
             const categoryStore = {};
@@ -116,7 +391,6 @@
 
             categorySelect.addEventListener('change', function () {
                 const selectedId = categorySelect.value;
-
                 if (selectedId && categoryStore[selectedId]) {
                     btnCategoryModal.textContent = "✏️ Editar";
                     btnCategoryModal.classList.replace("btn-outline-primary", "btn-outline-warning");
@@ -175,45 +449,27 @@
                 try {
                     const response = await fetch(handlerUrl, {
                         method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json'
-                        },
-                        body: JSON.stringify({
-                            Id: id,
-                            CategoryName: name,
-                            Abbreviation: abbr,
-                            Comment: comment
-                        })
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ Id: id, CategoryName: name, Abbreviation: abbr, Comment: comment })
                     });
 
                     if (response.ok) {
                         const data = await response.json();
-
-                        categoryStore[data.id] = {
-                            name: data.name,
-                            abbr: data.abbreviation,
-                            comment: data.comment
-                        };
+                        categoryStore[data.id] = { name: data.name, abbr: data.abbreviation, comment: data.comment };
 
                         if (id > 0) {
                             const opt = categorySelect.querySelector(`option[value="${id}"]`);
-                            if (opt) {
-                                opt.text = `${data.name} (${data.abbreviation})`;
-                            }
+                            if (opt) opt.text = `${data.name} (${data.abbreviation})`;
                         } else {
                             const option = new Option(`${data.name} (${data.abbreviation})`, data.id);
                             categorySelect.add(option, undefined);
                             categorySelect.value = data.id;
-
                             btnCategoryModal.textContent = "✏️ Editar";
                             btnCategoryModal.classList.replace("btn-outline-primary", "btn-outline-warning");
                         }
 
                         updateCodePrefix(data.abbreviation);
-
-                        const modalElement = document.getElementById('modalCategory');
-                        const modalInstance = bootstrap.Modal.getInstance(modalElement);
-                        modalInstance.hide();
+                        bootstrap.Modal.getInstance(document.getElementById('modalCategory')).hide();
                     } else {
                         const err = await response.json();
                         alertDiv.textContent = err.message || 'Error al procesar la categoría.';
