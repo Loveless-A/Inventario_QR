@@ -24,7 +24,7 @@ namespace Inventario_QR.Pages
         [BindProperty]
         public Product Product { get; set; } = new();
 
-        public SelectList CategoriesSL { get; set; }
+        public SelectList CategoriesSL { get; set; } = default!;
 
         public List<Category> CategoryList { get; set; } = new();
 
@@ -43,18 +43,45 @@ namespace Inventario_QR.Pages
             public string DetailsValue { get; set; } = string.Empty;
         }
 
-        public async Task<IActionResult> OnGetAsync()
+        public async Task<IActionResult> OnGetAsync(int? id)
         {
             await LoadDataAsync();
 
-            Product.Code = "INV-" + Guid.NewGuid().ToString().Substring(0, 6).ToUpper();
-            Product.Qr = "QR-" + Guid.NewGuid().ToString().Substring(0, 8).ToUpper();
-            Product.Active = true;
+            if (id.HasValue && id.Value > 0)
+            {
+                Product = await _context.Products.FindAsync(id.Value) ?? new();
+                if (Product.Id == 0)
+                {
+                    return RedirectToPage("./Index");
+                }
+
+                // Cargar los detalles existentes de este producto
+                var productDetails = await _context.ProductDetails
+                    .Where(pd => pd.ProductId == id.Value)
+                    .ToListAsync();
+
+                foreach (var item in AllCatalogItems)
+                {
+                    var existing = productDetails.FirstOrDefault(pd => pd.DetailsId == item.DetailsId);
+                    if (existing != null)
+                    {
+                        item.IsSelected = true;
+                        item.DetailsValue = existing.DetailsValue ?? string.Empty;
+                        item.Amount = existing.Amount > 0 ? existing.Amount : 1;
+                    }
+                }
+            }
+            else
+            {
+                Product.Code = "INV-" + Guid.NewGuid().ToString().Substring(0, 6).ToUpper();
+                Product.Qr = "QR-" + Guid.NewGuid().ToString().Substring(0, 8).ToUpper();
+                Product.Active = true;
+            }
 
             return Page();
         }
 
-        public async Task<IActionResult> OnPostAsync()
+        public async Task<IActionResult> OnPostAsync(int? id)
         {
             ModelState.Remove("Product.Category");
 
@@ -64,28 +91,87 @@ namespace Inventario_QR.Pages
                 return Page();
             }
 
-            _context.Products.Add(Product);
-            await _context.SaveChangesAsync();
-
-            if (SelectedCatalogItems != null && SelectedCatalogItems.Any())
+            if (id.HasValue && id.Value > 0)
             {
-                foreach (var item in SelectedCatalogItems.Where(i => i.IsSelected))
+                // MODO EDICIÓN
+                var productInDb = await _context.Products.FindAsync(id.Value);
+                if (productInDb == null)
                 {
-                    _context.ProductDetails.Add(new ProductDetail
-                    {
-                        ProductId = Product.Id,
-                        DetailsId = item.DetailsId,
-                        Amount = item.Amount,
-                        DetailsValue = item.DetailsValue ?? string.Empty
-                    });
+                    return NotFound();
                 }
+
+                productInDb.CategoryId = Product.CategoryId;
+                productInDb.Code = Product.Code;
+                productInDb.ProductName = Product.ProductName;
+                productInDb.Active = Product.Active;
+
+                // Obtener detalles actuales en BD
+                var existingDetails = await _context.ProductDetails
+                    .Where(pd => pd.ProductId == id.Value)
+                    .ToListAsync();
+
+                // Procesar cada elemento enviado desde la vista
+                foreach (var item in SelectedCatalogItems)
+                {
+                    var dbDetail = existingDetails.FirstOrDefault(pd => pd.DetailsId == item.DetailsId);
+
+                    if (item.IsSelected)
+                    {
+                        if (dbDetail != null)
+                        {
+                            // Actualizar el valor si ya existía
+                            dbDetail.DetailsValue = item.DetailsValue ?? string.Empty;
+                            dbDetail.Amount = item.Amount > 0 ? item.Amount : 1;
+                        }
+                        else
+                        {
+                            // Crear nuevo registro si fue marcado ahora
+                            _context.ProductDetails.Add(new ProductDetail
+                            {
+                                ProductId = id.Value,
+                                DetailsId = item.DetailsId,
+                                Amount = item.Amount > 0 ? item.Amount : 1,
+                                DetailsValue = item.DetailsValue ?? string.Empty
+                            });
+                        }
+                    }
+                    else
+                    {
+                        // Si se desmarcó y existía, lo eliminamos
+                        if (dbDetail != null)
+                        {
+                            _context.ProductDetails.Remove(dbDetail);
+                        }
+                    }
+                }
+
                 await _context.SaveChangesAsync();
+            }
+            else
+            {
+                // MODO CREACIÓN
+                _context.Products.Add(Product);
+                await _context.SaveChangesAsync();
+
+                if (SelectedCatalogItems != null && SelectedCatalogItems.Any())
+                {
+                    foreach (var item in SelectedCatalogItems.Where(i => i.IsSelected))
+                    {
+                        _context.ProductDetails.Add(new ProductDetail
+                        {
+                            ProductId = Product.Id,
+                            DetailsId = item.DetailsId,
+                            Amount = item.Amount > 0 ? item.Amount : 1,
+                            DetailsValue = item.DetailsValue ?? string.Empty
+                        });
+                    }
+                    await _context.SaveChangesAsync();
+                }
             }
 
             return RedirectToPage("./Index");
         }
 
-        // --- AJAX: REGISTRAR DETALLE EN EL CATÁLOGO ---
         public async Task<IActionResult> OnPostRegisterCatalogItemAsync([FromBody] Detail detail)
         {
             if (string.IsNullOrWhiteSpace(detail.DetailName))
@@ -93,7 +179,7 @@ namespace Inventario_QR.Pages
                 return BadRequest(new { message = "El nombre del detalle es obligatorio." });
             }
 
-            detail.Complement = false; // Forzar que sea detalle principal
+            detail.Complement = false;
             _context.Details.Add(detail);
             await _context.SaveChangesAsync();
 
@@ -106,7 +192,6 @@ namespace Inventario_QR.Pages
             });
         }
 
-        // --- AJAX: MODIFICAR DETALLE DEL CATÁLOGO ---
         public async Task<IActionResult> OnPostUpdateCatalogItemAsync([FromBody] Detail detail)
         {
             if (detail.Id <= 0 || string.IsNullOrWhiteSpace(detail.DetailName))
@@ -131,7 +216,6 @@ namespace Inventario_QR.Pages
             });
         }
 
-        // --- AJAX: ELIMINAR DETALLE DEL CATÁLOGO ---
         public async Task<IActionResult> OnPostDeleteCatalogItemAsync([FromBody] Detail detail)
         {
             if (detail.Id <= 0)
@@ -145,7 +229,6 @@ namespace Inventario_QR.Pages
                 return NotFound(new { message = "El detalle no existe." });
             }
 
-            // Eliminar dependencias en ProductDetails si existieran
             var relatedProductDetails = _context.ProductDetails.Where(pd => pd.DetailsId == detail.Id);
             _context.ProductDetails.RemoveRange(relatedProductDetails);
 
@@ -155,7 +238,6 @@ namespace Inventario_QR.Pages
             return new JsonResult(new { success = true, id = detail.Id });
         }
 
-        // --- AJAX: CREAR CATEGORÍA ---
         public async Task<IActionResult> OnPostCreateCategoryAsync([FromBody] Category category)
         {
             if (string.IsNullOrWhiteSpace(category.CategoryName) || string.IsNullOrWhiteSpace(category.Abbreviation))
@@ -179,7 +261,6 @@ namespace Inventario_QR.Pages
             });
         }
 
-        // --- AJAX: EDITAR CATEGORÍA ---
         public async Task<IActionResult> OnPostUpdateCategoryAsync([FromBody] Category category)
         {
             if (category.Id <= 0 || string.IsNullOrWhiteSpace(category.CategoryName) || string.IsNullOrWhiteSpace(category.Abbreviation))
@@ -229,7 +310,7 @@ namespace Inventario_QR.Pages
                 DetailsId = d.Id,
                 DetailName = d.DetailName,
                 Complement = d.Complement,
-                IsSelected = !d.Complement,
+                IsSelected = false,
                 Amount = 1,
                 DetailsValue = string.Empty
             }).ToList();

@@ -2,131 +2,103 @@
 @model Inventario_QR.Pages.VisualizationsModel
 @{
     ViewData["Title"] = "Acta de Asignación - " + Model.Product.ProductName;
+    Layout = null; // Elimina la barra de navegación, admin y cerrar sesión
 }
 
-<div class="container my-4">
-    <!-- Botones de Acción (Se ocultan al imprimir/generar PDF) -->
-    <div class="d-flex justify-content-between align-items-center mb-4 d-print-none">
-        <a asp-page="./Index" class="btn btn-outline-secondary">← Volver al Panel</a>
-        <div>
-            <button type="button" onclick="window.print();" class="btn btn-success fw-bold">
-                🖨️ Descargar / Imprimir PDF
-            </button>
-        </div>
-    </div>
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>@ViewData["Title"]</title>
+    <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
+    <link rel="stylesheet" href="~/css/site.css" />
+</head>
+<body class="bg-light d-flex align-items-center justify-content-center min-vh-100">
 
-    <!-- Contenido del Acta -->
-    <div class="card shadow-sm border-0 p-5 bg-white">
-        <!-- Encabezado del Acta -->
-        <div class="text-center border-bottom pb-4 mb-4">
-            <h3 class="fw-bold text-success">ACTA DE ASIGNACIÓN DE ACTIVOS Y EQUIPO</h3>
-            <p class="text-muted mb-0">Sistema de Inventario y Control QR</p>
-        </div>
+    <div class="container" style="max-width: 750px;">
+        <!-- Contenedor Único y Centrado -->
+        <div class="card shadow-sm border-0 p-4 p-md-5 bg-white">
 
-        <!-- Información General -->
-        <div class="row mb-4">
-            <!-- Datos del Activo y Código QR Generado Automáticamente -->
-            <div class="col-md-6 border-end">
-                <h5 class="text-secondary border-bottom pb-2">📦 Datos del Activo</h5>
-                <div class="row align-items-center mt-2">
-                    <div class="col-7">
+            <!-- Título Sutil -->
+            <div class="text-center border-bottom pb-3 mb-4">
+                <h4 class="fw-bold text-success mb-1">ACTA DE ASIGNACIÓN DE ACTIVOS Y EQUIPO</h4>
+                <p class="text-muted small mb-0">Sistema de Inventario y Control QR</p>
+            </div>
+
+            <!-- Información General (Activo y Responsable Lado a Lado) -->
+            <div class="row mb-4">
+                <!-- Datos del Activo y Especificaciones Técnicas (Sin imagen de QR) -->
+                <div class="col-md-6 border-end pe-md-4 mb-3 mb-md-0">
+                    <h6 class="text-secondary border-bottom pb-2 fw-bold">📦 Datos del Activo</h6>
+                    <div class="mt-2 small">
                         <p class="mb-1"><strong>Nombre:</strong> @Model.Product.ProductName</p>
                         <p class="mb-1"><strong>Código:</strong> @Model.Product.Code</p>
-                        <p class="mb-1"><strong>QR ID:</strong> <code id="qr-text">@Model.Product.Qr</code></p>
-                    </div>
-                    <div class="col-5 text-center">
-                        <!-- QR generado en el servidor -->
-                        <div id="qrcode" class="p-2 bg-light border rounded d-inline-block shadow-sm">
-                            <img src="@Model.QrImage" alt="Codigo QR del activo" width="95" height="95" />
+                        <p class="mb-2"><strong>QR ID:</strong> <code class="text-danger">@Model.Product.Qr</code></p>
+
+                        <div class="mt-3 pt-2 border-top border-secondary">
+                            <h6 class="text-dark fw-bold small mb-1">⚙️ Especificaciones Técnicas:</h6>
+                            <ul class="list-unstyled small mb-0 text-dark">
+                                @foreach (var item in Model.Items.Where(i => !i.Complement))
+                                {
+                                    <li class="mb-1"><strong>• @item.DetailName:</strong> @(string.IsNullOrEmpty(item.DetailsValue) ? "-" : item.DetailsValue)</li>
+                                }
+                            </ul>
                         </div>
-                        <small class="d-block text-muted mt-1" style="font-size: 10px;">Escanee para ver detalles</small>
+                    </div>
+                </div>
+
+                <!-- Datos del Responsable -->
+                <div class="col-md-6 ps-md-4">
+                    <h6 class="text-secondary border-bottom pb-2 fw-bold">👤 Datos del Responsable / Destino</h6>
+                    <div class="small mt-2">
+                        <p class="mb-1"><strong>Personal Asignado:</strong> @Model.Characteristic.PersonName</p>
+                        <p class="mb-1"><strong>C.I.:</strong> @Model.Characteristic.PersonIdentification</p>
+                        <p class="mb-1"><strong>Teléfono:</strong> @Model.Characteristic.PersonNumbers</p>
+                        <p class="mb-1"><strong>Departamento:</strong> @Model.Characteristic.Localization</p>
+                        <p class="mb-1"><strong>Fecha:</strong> @Model.Characteristic.Date.ToString("dd/MM/yyyy HH:mm")</p>
                     </div>
                 </div>
             </div>
 
-            <!-- Datos del Responsable -->
-            <div class="col-md-6 ps-md-4">
-                <h5 class="text-secondary border-bottom pb-2">👤 Datos del Responsable / Destino</h5>
-                <p class="mb-1"><strong>Personal Asignado:</strong> @Model.Characteristic.PersonName</p>
-                <p class="mb-1"><strong>C.I.:</strong> @Model.Characteristic.PersonIdentification</p>
-                <p class="mb-1"><strong>Teléfono:</strong> @Model.Characteristic.PersonNumbers</p>
-                <p class="mb-1"><strong>Departamento:</strong> @Model.Characteristic.Localization</p>
-                <p class="mb-1"><strong>Fecha de Asignación:</strong> @Model.Characteristic.Date.ToString("dd/MM/yyyy HH:mm")</p>
-            </div>
-        </div>
-
-        <!-- Tabla de Componentes y Complementos -->
-        <div class="mb-5">
-            <h5 class="text-secondary border-bottom pb-2 mb-3">📋 Componentes y Accesorios Entregados</h5>
-            <div class="table-responsive">
-                <table class="table table-bordered align-middle">
-                    <thead class="table-light">
-                        <tr>
-                            <th style="width: 25%;">Estado</th>
-                            <th style="width: 40%;">Elemento</th>
-                            <th style="width: 15%;">Cantidad</th>
-                            <th style="width: 20%;">Observaciones / Serie</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        @if (Model.Items.Any())
-                        {
-                            @foreach (var item in Model.Items)
+            <!-- Tabla Solo para Accesorios / Complementos -->
+            <div class="mb-3">
+                <h6 class="text-secondary border-bottom pb-2 mb-3 fw-bold">📋 Accesorios y Complementos Entregados</h6>
+                <div class="table-responsive">
+                    <table class="table table-bordered table-sm align-middle mb-0" style="font-size: 13px;">
+                        <thead class="table-light">
+                            <tr>
+                                <th class="text-dark">Accesorio / Elemento</th>
+                                <th style="width: 20%;" class="text-center text-dark">Cantidad</th>
+                                <th style="width: 40%;" class="text-dark">Observaciones / Serie</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @if (Model.Items.Any(i => i.Complement))
+                            {
+                                @foreach (var item in Model.Items.Where(i => i.Complement))
+                                {
+                                    <tr>
+                                        <td><strong>@item.DetailName</strong></td>
+                                        <td class="text-center">@item.Amount</td>
+                                        <td>@(string.IsNullOrEmpty(item.DetailsValue) ? "-" : item.DetailsValue)</td>
+                                    </tr>
+                                }
+                            }
+                            else
                             {
                                 <tr>
-                                    <td>
-                                        @if (item.Complement)
-                                        {
-                                            @if (item.IsSelected)
-                                            {
-                                                <span class="badge bg-success">Entregado / Incluido</span>
-                                            }
-                                            else
-                                            {
-                                                <span class="badge bg-secondary">No Incluido</span>
-                                            }
-                                        }
-                                        else
-                                        {
-                                            <span class="text-muted">Fijo del Sistema</span>
-                                        }
-                                    </td>
-                                    <td>
-                                        <strong>@item.DetailName</strong>
-                                    </td>
-                                    <td>
-                                        @(item.Complement? item.Amount.ToString() : "-")
-                                    </td>
-                                    <td>
-                                        @(string.IsNullOrEmpty(item.DetailsValue) ? "-" : item.DetailsValue)
-                                    </td>
+                                    <td colspan="3" class="text-center text-muted py-3">No hay accesorios o complementos adicionales registrados.</td>
                                 </tr>
                             }
-                        }
-                        else
-                        {
-                            <tr>
-                                <td colspan="4" class="text-center text-muted">No hay componentes registrados.</td>
-                            </tr>
-                        }
-                    </tbody>
-                </table>
+                        </tbody>
+                    </table>
+                </div>
             </div>
-        </div>
 
-        <!-- Firmas de Conformidad -->
-        <div class="row mt-5 pt-5 text-center">
-            <div class="col-6">
-                <div class="border-top pt-2 mx-auto" style="width: 80%;">
-                    <p class="mb-0 fw-bold">Entregado por (Inventarios)</p>
-                </div>
-            </div>
-            <div class="col-6">
-                <div class="border-top pt-2 mx-auto" style="width: 80%;">
-                    <p class="mb-0 fw-bold">Recibido Conforme (Funcionario)</p>
-                    <p class="text-muted small">C.I.: @Model.Characteristic.PersonIdentification</p>
-                </div>
-            </div>
         </div>
     </div>
-</div>
+
+    <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

@@ -1,0 +1,673 @@
+﻿@page
+@model Inventario_QR.Pages.GroupAssignmentFormModel
+
+@{
+    ViewData["Title"] = "Formularios de Dotación en Lote";
+}
+
+<style>
+    /* =========================================
+           DISEÑO GENERAL DE CADA FORMULARIO
+           ========================================= */
+
+    .group-assignment-sheet {
+        width: 100%;
+        max-width: 7.5in;
+        margin: 0 auto 25px;
+        padding: 0.30in;
+        box-sizing: border-box;
+        background: #fff;
+        color: #111;
+        font-family: Arial, Helvetica, sans-serif;
+        font-size: 10px;
+        line-height: 1.35;
+    }
+
+        .group-assignment-sheet * {
+            box-sizing: border-box;
+        }
+
+        .group-assignment-sheet p {
+            margin: 0 0 4px;
+        }
+
+        .group-assignment-sheet h3 {
+            font-size: 14px;
+            font-weight: bold;
+            margin: 0 0 4px;
+        }
+
+        .group-assignment-sheet h6 {
+            font-size: 10px;
+            font-weight: bold;
+            margin: 0 0 7px;
+        }
+
+    /* =========================================
+           ENCABEZADO Y LOGOTIPO
+           ========================================= */
+
+    .group-assignment-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        margin-bottom: 25px;
+    }
+
+    .group-assignment-logo {
+        flex: 0 0 105px;
+        width: 105px;
+        text-align: center;
+        padding-right: 12px;
+        border-right: 1px solid #333;
+    }
+
+        .group-assignment-logo img {
+            display: block;
+            width: 55px;
+            height: 58px;
+            object-fit: contain;
+            margin: 0 auto 4px;
+        }
+
+        .group-assignment-logo span {
+            display: block;
+            font-size: 8px;
+            font-weight: bold;
+        }
+
+    .group-assignment-heading {
+        flex: 1;
+        min-width: 0;
+        text-align: center;
+    }
+
+        .group-assignment-heading h3 {
+            font-size: 13px;
+            line-height: 1.4;
+            text-transform: uppercase;
+        }
+
+        .group-assignment-heading p {
+            font-size: 8px;
+            margin: 0;
+        }
+
+    /* =========================================
+           DATOS DEL ACTIVO Y CÓDIGO QR
+           ========================================= */
+
+    .group-asset-details {
+        display: flex;
+        align-items: flex-start;
+        gap: 18px;
+        margin-bottom: 23px;
+    }
+
+    .group-asset-information {
+        flex: 1;
+        min-width: 0;
+    }
+
+        .group-asset-information .section-title {
+            padding-bottom: 5px;
+            border-bottom: 1px solid #cbd0d5;
+            margin-bottom: 8px;
+        }
+
+        .group-asset-information p {
+            overflow-wrap: anywhere;
+        }
+
+    .group-technical-specifications {
+        margin-top: 10px;
+        padding-top: 7px;
+        border-top: 1px solid #d6d6d6;
+    }
+
+        .group-technical-specifications ul {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+
+        .group-technical-specifications li {
+            margin-bottom: 3px;
+            overflow-wrap: anywhere;
+        }
+
+    .group-asset-qr {
+        flex: 0 0 125px;
+        width: 125px;
+        text-align: center;
+        padding-top: 2px;
+    }
+
+    .group-qr-code-text {
+        display: block;
+        font-size: 8px;
+        font-weight: bold;
+        overflow-wrap: anywhere;
+        margin-bottom: 7px;
+    }
+
+    .group-qr-image-container {
+        display: inline-block;
+        padding: 6px;
+        background: #fff;
+        border: 1px solid #e3e3e3;
+        margin-bottom: 6px;
+    }
+
+        .group-qr-image-container img {
+            display: block;
+            width: 90px;
+            height: 90px;
+            object-fit: contain;
+        }
+
+    .group-qr-brand {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 4px;
+        margin-bottom: 3px;
+    }
+
+        .group-qr-brand img {
+            width: 17px;
+            height: 17px;
+            object-fit: contain;
+        }
+
+        .group-qr-brand span {
+            font-size: 8px;
+            font-weight: bold;
+        }
+
+    .group-qr-caption {
+        font-size: 7px;
+        color: #555;
+    }
+
+    /* =========================================
+           DATOS DEL RESPONSABLE Y DESTINO
+           ========================================= */
+
+    .group-responsible-details {
+        margin-bottom: 24px;
+    }
+
+    .group-responsible-title {
+        padding-bottom: 6px;
+        border-bottom: 1px solid #d2d2d2;
+        margin-bottom: 9px !important;
+    }
+
+    .group-responsible-columns {
+        display: flex;
+        gap: 15px;
+    }
+
+    .group-responsible-column {
+        width: 50%;
+        min-width: 0;
+    }
+
+        .group-responsible-column p {
+            overflow-wrap: anywhere;
+        }
+
+    /* =========================================
+           TABLA DE ACCESORIOS
+           ========================================= */
+
+    .group-accessories-section {
+        width: 100%;
+        margin-bottom: 45px;
+    }
+
+    .group-accessories-title {
+        padding-bottom: 6px;
+        border-bottom: 1px solid #333;
+        margin-bottom: 8px !important;
+    }
+
+    .group-accessories-table {
+        width: 100%;
+        max-width: 100%;
+        table-layout: fixed;
+        border-collapse: collapse;
+        border-spacing: 0;
+        margin: 0;
+        font-size: 9px;
+    }
+
+        .group-accessories-table th,
+        .group-accessories-table td {
+            border: 1px solid #252525;
+            padding: 5px 6px;
+            vertical-align: middle;
+            white-space: normal;
+            overflow-wrap: anywhere;
+            word-wrap: break-word;
+        }
+
+        .group-accessories-table th {
+            font-weight: bold;
+            text-align: left;
+        }
+
+            .group-accessories-table th:nth-child(1),
+            .group-accessories-table td:nth-child(1) {
+                width: 47%;
+            }
+
+            .group-accessories-table th:nth-child(2),
+            .group-accessories-table td:nth-child(2) {
+                width: 15%;
+                text-align: center;
+            }
+
+            .group-accessories-table th:nth-child(3),
+            .group-accessories-table td:nth-child(3) {
+                width: 38%;
+            }
+
+    /* =========================================
+           FIRMAS DE CONFORMIDAD
+           ========================================= */
+
+    .group-assignment-signatures {
+        display: flex;
+        width: 100%;
+        margin-top: 45px;
+        text-align: center;
+    }
+
+    .group-signature-column {
+        width: 50%;
+        padding: 0 10px;
+    }
+
+    .group-signature-line {
+        width: 85%;
+        margin: 0 auto;
+        padding-top: 6px;
+        border-top: 1px solid #222;
+    }
+
+        .group-signature-line p {
+            font-size: 8px;
+            font-weight: bold;
+            margin-bottom: 2px;
+        }
+
+        .group-signature-line .group-signature-id {
+            font-weight: normal;
+        }
+
+    /* =========================================
+           VISTA EN PANTALLA
+           ========================================= */
+
+    @@media screen {
+        .group-assignment-sheet {
+            box-shadow: 0 0 5px #ccc;
+        }
+    }
+
+    /* =========================================
+           IMPRESIÓN EN PAPEL CARTA
+           ========================================= */
+
+    @@page {
+        size: letter portrait;
+        margin: 0.40in;
+    }
+
+    @@media print {
+        html,
+        body {
+            width: 100% !important;
+            height: auto !important;
+            margin: 0 !important;
+            padding: 0 !important;
+            background: #fff !important;
+        }
+
+        body {
+            -webkit-print-color-adjust: exact;
+            print-color-adjust: exact;
+        }
+
+        .d-print-none,
+        nav,
+        footer {
+            display: none !important;
+        }
+
+        .container-fluid {
+            width: 100% !important;
+            max-width: none !important;
+            margin: 0 !important;
+            padding: 0 !important;
+        }
+
+        .group-assignment-sheet {
+            width: 100% !important;
+            max-width: none !important;
+            min-width: 0 !important;
+            margin: 0 !important;
+            padding: 0 !important;
+            box-shadow: none !important;
+            border: 0 !important;
+            overflow: visible !important;
+            /* Cada activo empieza en una hoja nueva */
+            page-break-after: always;
+            break-after: page;
+        }
+            /* Evita generar una hoja en blanco después del último activo */
+            .group-assignment-sheet:last-child {
+                page-break-after: auto;
+                break-after: auto;
+            }
+
+        .group-assignment-header,
+        .group-asset-details,
+        .group-responsible-details,
+        .group-accessories-section,
+        .group-assignment-signatures {
+            break-inside: avoid;
+            page-break-inside: avoid;
+        }
+
+        .group-assignment-sheet img {
+            max-width: 100%;
+        }
+
+        .group-accessories-table {
+            width: 100% !important;
+            max-width: 100% !important;
+        }
+
+            .group-accessories-table thead {
+                display: table-header-group;
+            }
+
+            .group-accessories-table tr {
+                break-inside: avoid;
+                page-break-inside: avoid;
+            }
+
+        .group-assignment-sheet,
+        .group-assignment-sheet p,
+        .group-assignment-sheet h3,
+        .group-assignment-sheet h6,
+        .group-assignment-sheet span,
+        .group-assignment-sheet li,
+        .group-assignment-sheet th,
+        .group-assignment-sheet td {
+            color: #111 !important;
+        }
+    }
+</style>
+
+<div class="container-fluid my-4 px-4">
+
+    <!-- BOTONES DE ACCIÓN: NO SE IMPRIMEN -->
+    <div class="d-flex justify-content-between align-items-center mb-4 d-print-none">
+
+        <a asp-page="./Index" class="btn btn-outline-secondary">
+            ← Volver al Panel
+        </a>
+
+        <button type="button"
+                onclick="window.print();"
+                class="btn btn-success fw-bold">
+            🖨️ Descargar / Imprimir Todos (Carta)
+        </button>
+
+    </div>
+
+    <!-- UN FORMULARIO POR CADA ACTIVO -->
+    @foreach (var item in Model.Actas)
+    {
+        <div class="group-assignment-sheet">
+
+            <!-- ENCABEZADO PRINCIPAL -->
+            <div class="group-assignment-header">
+
+                <div class="group-assignment-logo">
+
+                    <img src="~/images/logo.png"
+                         alt="Logo SuperVigilancia" />
+
+                    <span>SuperVigilancia</span>
+
+                </div>
+
+                <div class="group-assignment-heading">
+
+                    <h3>
+                        FORMULARIO DE DOTACIÓN Y ASIGNACIÓN DE ACTIVOS
+                    </h3>
+
+                    <p>
+                        Sistema de Inventario y Control QR
+                    </p>
+
+                </div>
+
+            </div>
+
+            <!-- DATOS DEL ACTIVO Y QR -->
+            <div class="group-asset-details">
+
+                <div class="group-asset-information">
+
+                    <h6 class="section-title">
+                        Datos del Activo
+                    </h6>
+
+                    <p>
+                        <strong>Nombre:</strong>
+                        @item.Product.ProductName
+                    </p>
+
+                    <p>
+                        <strong>Código:</strong>
+                        @item.Product.Code
+                    </p>
+
+                    <!-- ESPECIFICACIONES TÉCNICAS -->
+                    <div class="group-technical-specifications">
+
+                        <h6>
+                            ⚙ Especificaciones Técnicas:
+                        </h6>
+
+                        <ul>
+                            @foreach (var detail in item.Items.Where(i => !i.Complement))
+                            {
+                                <li>
+                                    <strong>• @detail.DetailName:</strong>
+                                    @(string.IsNullOrEmpty(detail.DetailsValue)
+                                                                ? "-"
+                                                                : detail.DetailsValue)
+                        </li>
+                                                }
+                        </ul>
+
+                    </div>
+
+                </div>
+
+                <!-- CÓDIGO QR -->
+                <div class="group-asset-qr">
+
+                    <span class="group-qr-code-text">
+                        @item.Product.Qr
+                    </span>
+
+                    <div class="group-qr-image-container">
+
+                        <img src="@item.QrImage"
+                             alt="Código QR del activo" />
+
+                    </div>
+
+                    <div class="group-qr-brand">
+
+                        <img src="~/images/logo.png"
+                             alt="Logo" />
+
+                        <span>SuperVigilancia</span>
+
+                    </div>
+
+                    <div class="group-qr-caption">
+                        Escanee para ver detalles
+                    </div>
+
+                </div>
+
+            </div>
+
+            <!-- DATOS DEL RESPONSABLE -->
+            <div class="group-responsible-details">
+
+                <h6 class="group-responsible-title">
+                    Datos del Responsable / Destino
+                </h6>
+
+                <div class="group-responsible-columns">
+
+                    <div class="group-responsible-column">
+
+                        <p>
+                            <strong>Personal Asignado:</strong>
+                            @item.Characteristic.PersonName
+                        </p>
+
+                        <p>
+                            <strong>C.I.:</strong>
+                            @item.Characteristic.PersonIdentification
+                        </p>
+
+                        <p>
+                            <strong>Teléfono:</strong>
+                            @item.Characteristic.PersonNumbers
+                        </p>
+
+                    </div>
+
+                    <div class="group-responsible-column">
+
+                        <p>
+                            <strong>Departamento:</strong>
+                            @item.Characteristic.Localization
+                        </p>
+
+                        <p>
+                            <strong>Fecha de Asignación:</strong>
+                            @item.Characteristic.Date.ToString("dd/MM/yyyy HH:mm")
+                        </p>
+
+                    </div>
+
+                </div>
+
+            </div>
+
+            <!-- TABLA DE ACCESORIOS Y COMPLEMENTOS -->
+            <div class="group-accessories-section">
+
+                <h6 class="group-accessories-title">
+                    Accesorios y Complementos Entregados
+                </h6>
+
+                <table class="group-accessories-table">
+
+                    <thead>
+                        <tr>
+                            <th>Accesorio / Elemento</th>
+                            <th>Cantidad</th>
+                            <th>Observaciones / Serie</th>
+                        </tr>
+                    </thead>
+
+                    <tbody>
+
+                        @if (item.Items.Any(i => i.Complement))
+                        {
+                            @foreach (var detail in item.Items.Where(i => i.Complement))
+                            {
+                                <tr>
+
+                                    <td>
+                                        <strong>@detail.DetailName</strong>
+                                    </td>
+
+                                    <td>
+                                        @detail.Amount
+                                    </td>
+
+                                    <td>
+                                        @(string.IsNullOrEmpty(detail.DetailsValue)
+                                                                    ? "-"
+                                                                    : detail.DetailsValue)
+                        </td>
+
+                                </tr>
+                                        }
+                        }
+                        else
+                        {
+                            <tr>
+                                <td colspan="3" style="text-align: center;">
+                                    No hay accesorios o complementos adicionales registrados.
+                                </td>
+                            </tr>
+                        }
+
+                    </tbody>
+
+                </table>
+
+            </div>
+
+            <!-- FIRMAS DE CONFORMIDAD -->
+            <div class="group-assignment-signatures">
+
+                <div class="group-signature-column">
+
+                    <div class="group-signature-line">
+
+                        <p>Entregado por (Inventarios)</p>
+
+                    </div>
+
+                </div>
+
+                <div class="group-signature-column">
+
+                    <div class="group-signature-line">
+
+                        <p>Recibido Conforme (Funcionario)</p>
+
+                        <p class="group-signature-id">
+                            C.I.: @item.Characteristic.PersonIdentification
+                        </p>
+
+                    </div>
+
+                </div>
+
+            </div>
+
+        </div>
+    }
+
+</div>

@@ -8,70 +8,78 @@
     <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
 </head>
 <body class="d-flex flex-column h-100 bg-light">
-    <header>
-        <nav class="navbar navbar-expand-lg navbar-light bg-white border-bottom shadow-sm px-3 py-2 mb-4">
-            <div class="container-fluid">
 
-                <!-- IZQUIERDA: Logo y Nombre de Usuario (Admin) -->
-                <div class="d-flex align-items-center gap-3">
-                    <a asp-page="/Index" class="d-flex align-items-center text-decoration-none">
-                        <img id="dynamicLogo" src="~/images/logo.png" alt="Logo" class="rounded" style="height: 55px; width: auto; object-fit: contain; background: #f8f9fa; padding: 2px; border: 1px solid #dee2e6;"
-                             onerror="this.onerror=null; this.src='https://via.placeholder.com/55?text=QR';" />
-                    </a>
+    @{
+        bool isLoginPage = ViewContext.RouteData.Values["page"]?.ToString() == "/Login";
+    }
 
-                    <!-- Usuario Actual (Admin) -->
-                    <div class="d-none d-sm-flex align-items-center bg-light border px-3 py-1 rounded-pill shadow-sm gap-2">
-                        <span class="badge bg-secondary">admin</span>
-                        <span class="fw-semibold text-dark small">
-                            @(User.Identity != null && User.Identity.IsAuthenticated ? User.Identity.Name : "Administrador")
-                        </span>
-                    </div>
-                </div>
+    @if (!isLoginPage)
+    {
+        <header>
+            <nav class="navbar navbar-expand-lg navbar-light bg-white border-bottom shadow-sm px-3 py-2 mb-4">
+                <div class="container-fluid">
 
-                <!-- BOTÓN HAMBURGUESA PARA MÓVILES -->
-                <button class="navbar-toggler border-0 p-1" type="button" data-bs-toggle="collapse" data-bs-target="#navbarContent" aria-controls="navbarContent" aria-expanded="false" aria-label="Toggle navigation">
-                    <span class="navbar-toggler-icon"></span>
-                </button>
+                    <!-- IZQUIERDA: Logo y Nombre de Usuario (Admin) -->
+                    <div class="d-flex align-items-center gap-3">
+                        <a asp-page="/Index" class="d-flex align-items-center text-decoration-none">
+                            <img id="dynamicLogo" src="~/images/logo.png" alt="Logo" class="rounded" style="height: 55px; width: auto; object-fit: contain; background: #f8f9fa; padding: 2px; border: 1px solid #dee2e6;"
+                                 onerror="this.onerror=null; this.src='https://via.placeholder.com/55?text=QR';" />
+                        </a>
 
-                <!-- CONTENIDO COLAPSABLE EN MÓVILES -->
-                <div class="collapse navbar-collapse justify-content-end mt-3 mt-lg-0" id="navbarContent">
-                    <div class="d-flex flex-column flex-lg-row align-items-lg-center gap-3">
-
-                        <!-- Navegación unificada con indicador azul dinámico según la página activa -->
-                        <div class="bg-light p-1 rounded-pill border d-flex flex-column flex-lg-row gap-1 shadow-sm align-items-center w-100 w-lg-auto text-center">
-
-                            <!-- Opción Inicio -->
-                            @{
-                                bool isHomeActive = ViewContext.RouteData.Values["page"]?.ToString() == "/Index";
-                            }
-                            <a class="btn btn-sm px-3 rounded-pill fw-medium text-decoration-none w-100 w-lg-auto @(isHomeActive ? "btn-primary shadow-sm fw-bold text-white" : "text-dark bg-transparent")" asp-page="/Index">Inicio</a>
-
-                            <!-- Opción Ver Producto / ProductList -->
-                            @{
-                                bool isProductListActive = ViewContext.RouteData.Values["page"]?.ToString() == "/ProductList";
-                            }
-                            <a class="btn btn-sm px-3 rounded-pill fw-medium text-decoration-none w-100 w-lg-auto @(isProductListActive ? "btn-primary shadow-sm fw-bold text-white" : "text-dark bg-transparent")" asp-page="/ProductList">Ver Producto</a>
-
-                            <!-- Opción Nuevo Producto / CreateProduct -->
-                            @{
-                                bool isCreateActive = ViewContext.RouteData.Values["page"]?.ToString() == "/CreateProduct";
-                            }
-                            <a class="btn btn-sm px-3 rounded-pill fw-medium text-decoration-none w-100 w-lg-auto @(isCreateActive ? "btn-primary shadow-sm fw-bold text-white" : "text-dark bg-transparent")" asp-page="/CreateProduct">Nuevo Producto</a>
+                        <!-- Usuario Actual (Admin) -->
+                        <div class="d-none d-sm-flex align-items-center bg-light border px-3 py-1 rounded-pill shadow-sm gap-2">
+                            <span class="badge bg-secondary">admin</span>
+                            <span class="fw-semibold text-dark small">
+                                @(User.Identity != null && User.Identity.IsAuthenticated ? User.Identity.Name : "Administrador")
+                            </span>
                         </div>
-
-                        <div class="d-none d-lg-block vr mx-1"></div>
-
-                        <!-- Cerrar Sesión -->
-                        <form method="post" asp-page="/Login" asp-page-handler="Logout" class="m-0 w-100 w-lg-auto">
-                            <button type="submit" class="btn btn-outline-danger btn-sm px-3 rounded-pill shadow-sm w-100">Cerrar Sesión</button>
-                        </form>
-
                     </div>
-                </div>
 
-            </div>
-        </nav>
-    </header>
+                    <!-- BOTÓN HAMBURGUESA PARA MÓVILES -->
+                    <button class="navbar-toggler border-0 p-1" type="button" data-bs-toggle="collapse" data-bs-target="#navbarContent" aria-controls="navbarContent" aria-expanded="false" aria-label="Toggle navigation">
+                        <span class="navbar-toggler-icon"></span>
+                    </button>
+
+                    <!-- CONTENIDO COLAPSABLE EN MÓVILES -->
+                    <div class="collapse navbar-collapse justify-content-end mt-3 mt-lg-0" id="navbarContent">
+                        <div class="d-flex flex-column flex-lg-row align-items-lg-center gap-3">
+
+                            <!-- Navegación unificada con indicador azul dinámico según la página activa -->
+                            <div class="bg-light p-1 rounded-pill border d-flex flex-column flex-lg-row gap-1 shadow-sm align-items-center w-100 w-lg-auto text-center">
+
+                                <!-- Opción Inicio -->
+                                @{
+                                    bool isHomeActive = ViewContext.RouteData.Values["page"]?.ToString() == "/Index";
+                                }
+                                <a class="btn btn-sm px-3 rounded-pill fw-medium text-decoration-none w-100 w-lg-auto @(isHomeActive ? "btn-primary shadow-sm fw-bold text-white" : "text-dark bg-transparent")" asp-page="/Index">Inicio</a>
+
+                                <!-- Opción Ver Producto / ProductList -->
+                                @{
+                                    bool isProductListActive = ViewContext.RouteData.Values["page"]?.ToString() == "/ProductList";
+                                }
+                                <a class="btn btn-sm px-3 rounded-pill fw-medium text-decoration-none w-100 w-lg-auto @(isProductListActive ? "btn-primary shadow-sm fw-bold text-white" : "text-dark bg-transparent")" asp-page="/ProductList">Ver Producto</a>
+
+                                <!-- Opción Nuevo Producto / CreateProduct -->
+                                @{
+                                    bool isCreateActive = ViewContext.RouteData.Values["page"]?.ToString() == "/CreateProduct";
+                                }
+                                <a class="btn btn-sm px-3 rounded-pill fw-medium text-decoration-none w-100 w-lg-auto @(isCreateActive ? "btn-primary shadow-sm fw-bold text-white" : "text-dark bg-transparent")" asp-page="/CreateProduct">Nuevo Producto</a>
+                            </div>
+
+                            <div class="d-none d-lg-block vr mx-1"></div>
+
+                            <!-- Cerrar Sesión -->
+                            <form method="post" asp-page="/Login" asp-page-handler="Logout" class="m-0 w-100 w-lg-auto">
+                                <button type="submit" class="btn btn-outline-danger btn-sm px-3 rounded-pill shadow-sm w-100">Cerrar Sesión</button>
+                            </form>
+
+                        </div>
+                    </div>
+
+                </div>
+            </nav>
+        </header>
+    }
 
     <main role="main" class="flex-shrink-0 mb-5">
         <div class="container-fluid px-3 px-md-4">
@@ -79,11 +87,14 @@
         </div>
     </main>
 
-    <footer class="footer mt-auto py-3 bg-white border-top text-muted text-center">
-        <div class="container">
-            <small>&copy; 2026 - Inventario_QR - <a asp-page="/Privacy" class="text-decoration-none">Privacidad</a></small>
-        </div>
-    </footer>
+    @if (!isLoginPage)
+    {
+        <footer class="footer mt-auto py-3 bg-white border-top text-muted text-center">
+            <div class="container">
+                <small>&copy; 2026 - Inventario_QR - <a asp-page="/Privacy" class="text-decoration-none">Privacidad</a></small>
+            </div>
+        </footer>
+    }
 
     <script src="~/lib/jquery/dist/jquery.min.js"></script>
     <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>

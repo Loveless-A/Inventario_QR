@@ -1,0 +1,134 @@
+﻿@page "{id:int}"
+@model Inventario_QR.Pages.ProductHistoryModel
+@{
+    ViewData["Title"] = "Historial de Asignaciones";
+}
+
+<div class="container-fluid mt-3 mb-5 px-2 px-md-3">
+    <!-- ENCABEZADO -->
+    <div class="card shadow-sm border-0 mb-3 overflow-hidden">
+        <div class="card-header bg-dark text-white d-flex flex-column flex-sm-row justify-content-between align-items-start align-items-sm-center py-3 px-3 gap-2">
+            <div>
+                <h5 class="mb-0 fw-bold fs-5 text-wrap">🕒 Historial de Asignaciones: @Model.Product?.ProductName</h5>
+                <span class="text-white-50 small">Código del Activo: @Model.Product?.Code | QR: @Model.Product?.Qr</span>
+            </div>
+            <a asp-page="./Index" class="btn btn-sm btn-light text-dark fw-bold text-nowrap">← Volver al Panel</a>
+        </div>
+    </div>
+
+    <!-- CARACTERÍSTICAS PRINCIPALES DEL EQUIPO -->
+    <div class="card bg-light border-0 p-3 mb-3 shadow-sm rounded-3">
+        <h6 class="text-success fw-bold mb-2 fs-6">💻 Características Principales del Equipo:</h6>
+        @if (Model.MainCharacteristics.Any())
+        {
+            <div class="d-flex flex-column flex-sm-row flex-wrap gap-2 align-items-stretch align-items-sm-center">
+                @foreach (var mainItem in Model.MainCharacteristics)
+                {
+                    <span class="badge bg-white text-dark border p-2 shadow-sm text-wrap text-start">
+                        <strong class="text-success">@mainItem.DetailName:</strong> @mainItem.DetailsValue
+                    </span>
+                }
+            </div>
+        }
+        else
+        {
+            <p class="text-muted small mb-0"><em>No tiene características principales registradas.</em></p>
+        }
+    </div>
+
+    <!-- ACCESORIOS / COMPLEMENTOS ASIGNADOS -->
+    <div class="card bg-light border-0 p-3 mb-3 shadow-sm rounded-3">
+        <h6 class="text-secondary fw-bold mb-2 fs-6">📦 Accesorios y Complementos Registrados:</h6>
+        @if (Model.AssignedAccessories.Any())
+        {
+            <div class="table-responsive">
+                <table class="table table-sm table-bordered bg-white mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Elemento / Accesorio</th>
+                            <th class="text-center" style="width: 100px;">Cantidad</th>
+                            <th>Observaciones / Serie</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var acc in Model.AssignedAccessories)
+                        {
+                            <tr>
+                                <td class="fw-bold">@acc.DetailName</td>
+                                <td class="text-center"><span class="badge bg-secondary">@acc.Amount</span></td>
+                                <td>@(string.IsNullOrEmpty(acc.DetailsValue) ? "Sin observaciones" : acc.DetailsValue)</td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        }
+        else
+        {
+            <p class="text-muted small mb-0"><em>Este equipo no tiene complementos o accesorios registrados actualmente.</em></p>
+        }
+    </div>
+
+    <!-- TABLA DE HISTORIAL DE PERSONAS -->
+    <div class="card shadow-sm border-0 rounded-3">
+        <div class="card-header bg-white py-3">
+            <h6 class="mb-0 fw-bold text-dark">👥 Registro Cronológico de Responsables</h6>
+        </div>
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0">
+                    <thead class="table-light text-uppercase fs-7 text-secondary">
+                        <tr>
+                            <th class="py-3 text-center">Estado</th>
+                            <th class="py-3">Persona Asignada</th>
+                            <th class="py-3">CI</th>
+                            <th class="py-3">Cargo</th>
+                            <th class="py-3">Área / Dependencia</th>
+                            <th class="py-3">Destino</th>
+                            <th class="py-3">Fecha de Asignación</th>
+                            <th class="py-3">Comentario / Estado</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @if (Model.HistoryItems != null && Model.HistoryItems.Any())
+                        {
+                            @foreach (var h in Model.HistoryItems)
+                            {
+                                <tr class="@(h.IsActive ? "table-success" : "")">
+                                    <td class="text-center">
+                                        @if (h.IsActive)
+                                        {
+                                            <span class="badge bg-success">Actual (Activo)</span>
+                                        }
+                                        else
+                                        {
+                                            <span class="badge bg-secondary">Histórico</span>
+                                        }
+                                    </td>
+                                    <td class="fw-bold text-dark">@h.PersonName</td>
+                                    <td><code>@h.Identification</code></td>
+                                    <td>@h.PositionName</td>
+                                    <td>@h.DependenceName</td>
+                                    <td>@h.Localization</td>
+                                    <td>@h.AssignmentDate.ToString("dd/MM/yyyy HH:mm")</td>
+                                    <td class="text-wrap" style="min-width: 200px;"><small class="text-muted">@h.Comment</small></td>
+                                </tr>
+                            }
+                        }
+                        else
+                        {
+                            <tr>
+                                <td colspan="8" class="text-center py-5 text-muted">
+                                    <div class="py-3">
+                                        <p class="mb-1 fs-5">Este producto aún no cuenta con un historial de asignaciones.</p>
+                                        <small class="text-muted">Las asignaciones pasadas aparecerán aquí al ser modificadas o canceladas.</small>
+                                    </div>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>

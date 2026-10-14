@@ -1,0 +1,645 @@
+﻿@page "{id:int}"
+@model Inventario_QR.Pages.AssignmentFormModel
+
+@{
+    ViewData["Title"] = "Formulario de Dotación - " + Model.Product?.ProductName;
+}
+
+<style>
+    /* =========================================
+           DISEÑO GENERAL DEL FORMULARIO
+           ========================================= */
+
+    .assignment-sheet {
+        width: 100%;
+        max-width: 7.5in;
+        margin: 0 auto 25px;
+        padding: 0.30in;
+        box-sizing: border-box;
+        background: #fff;
+        color: #111;
+        font-family: Arial, Helvetica, sans-serif;
+        font-size: 10px;
+        line-height: 1.35;
+    }
+
+        .assignment-sheet * {
+            box-sizing: border-box;
+        }
+
+        .assignment-sheet p {
+            margin: 0 0 4px;
+        }
+
+        .assignment-sheet h3 {
+            font-size: 14px;
+            font-weight: bold;
+            margin: 0 0 4px;
+        }
+
+        .assignment-sheet h6 {
+            font-size: 10px;
+            font-weight: bold;
+            margin: 0 0 7px;
+        }
+
+    /* =========================================
+           ENCABEZADO Y LOGOTIPO
+           ========================================= */
+
+    .assignment-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        margin-bottom: 25px;
+    }
+
+    .assignment-logo {
+        flex: 0 0 105px;
+        width: 105px;
+        text-align: center;
+        padding-right: 12px;
+        border-right: 1px solid #333;
+    }
+
+        .assignment-logo img {
+            display: block;
+            width: 55px;
+            height: 58px;
+            object-fit: contain;
+            margin: 0 auto 4px;
+        }
+
+        .assignment-logo span {
+            display: block;
+            font-size: 8px;
+            font-weight: bold;
+        }
+
+    .assignment-heading {
+        flex: 1;
+        min-width: 0;
+        text-align: center;
+    }
+
+        .assignment-heading h3 {
+            font-size: 13px;
+            line-height: 1.4;
+            text-transform: uppercase;
+        }
+
+        .assignment-heading p {
+            font-size: 8px;
+            margin: 0;
+        }
+
+    /* =========================================
+           DATOS DEL ACTIVO Y CÓDIGO QR
+           ========================================= */
+
+    .asset-details {
+        display: flex;
+        align-items: flex-start;
+        gap: 18px;
+        margin-bottom: 23px;
+    }
+
+    .asset-information {
+        flex: 1;
+        min-width: 0;
+    }
+
+        .asset-information .section-title {
+            padding-bottom: 5px;
+            border-bottom: 1px solid #cbd0d5;
+            margin-bottom: 8px;
+        }
+
+        .asset-information p {
+            overflow-wrap: anywhere;
+        }
+
+    .technical-specifications {
+        margin-top: 10px;
+        padding-top: 7px;
+        border-top: 1px solid #d6d6d6;
+    }
+
+        .technical-specifications ul {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+
+        .technical-specifications li {
+            margin-bottom: 3px;
+            overflow-wrap: anywhere;
+        }
+
+    .asset-qr {
+        flex: 0 0 125px;
+        width: 125px;
+        text-align: center;
+        padding-top: 2px;
+    }
+
+        .asset-qr .qr-code-text {
+            display: block;
+            font-size: 8px;
+            font-weight: bold;
+            overflow-wrap: anywhere;
+            margin-bottom: 7px;
+        }
+
+    .qr-image-container {
+        display: inline-block;
+        padding: 6px;
+        background: #fff;
+        border: 1px solid #e3e3e3;
+        margin-bottom: 6px;
+    }
+
+        .qr-image-container img {
+            display: block;
+            width: 90px;
+            height: 90px;
+            object-fit: contain;
+        }
+
+    .qr-brand {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 4px;
+        margin-bottom: 3px;
+    }
+
+        .qr-brand img {
+            width: 17px;
+            height: 17px;
+            object-fit: contain;
+        }
+
+        .qr-brand span {
+            font-size: 8px;
+            font-weight: bold;
+        }
+
+    .qr-caption {
+        font-size: 7px;
+        color: #555;
+    }
+
+    /* =========================================
+           RESPONSABLE Y DESTINO
+           ========================================= */
+
+    .responsible-details {
+        margin-bottom: 24px;
+    }
+
+    .responsible-title {
+        padding-bottom: 6px;
+        border-bottom: 1px solid #d2d2d2;
+        margin-bottom: 9px;
+    }
+
+    .responsible-columns {
+        display: flex;
+        gap: 15px;
+    }
+
+    .responsible-column {
+        width: 50%;
+        min-width: 0;
+    }
+
+        .responsible-column p {
+            overflow-wrap: anywhere;
+        }
+
+    /* =========================================
+           TABLA DE ACCESORIOS
+           ========================================= */
+
+    .accessories-section {
+        width: 100%;
+        margin-bottom: 45px;
+    }
+
+    .accessories-title {
+        padding-bottom: 6px;
+        border-bottom: 1px solid #333;
+        margin-bottom: 8px !important;
+    }
+
+    .accessories-table {
+        width: 100%;
+        max-width: 100%;
+        table-layout: fixed;
+        border-collapse: collapse;
+        border-spacing: 0;
+        margin: 0;
+        font-size: 9px;
+    }
+
+        .accessories-table th,
+        .accessories-table td {
+            border: 1px solid #252525;
+            padding: 5px 6px;
+            vertical-align: middle;
+            white-space: normal;
+            overflow-wrap: anywhere;
+            word-wrap: break-word;
+        }
+
+        .accessories-table th {
+            font-weight: bold;
+            text-align: left;
+        }
+
+            .accessories-table th:nth-child(1),
+            .accessories-table td:nth-child(1) {
+                width: 47%;
+            }
+
+            .accessories-table th:nth-child(2),
+            .accessories-table td:nth-child(2) {
+                width: 15%;
+                text-align: center;
+            }
+
+            .accessories-table th:nth-child(3),
+            .accessories-table td:nth-child(3) {
+                width: 38%;
+            }
+
+    /* =========================================
+           FIRMAS
+           ========================================= */
+
+    .assignment-signatures {
+        display: flex;
+        width: 100%;
+        margin-top: 45px;
+        text-align: center;
+    }
+
+    .signature-column {
+        width: 50%;
+        padding: 0 10px;
+    }
+
+    .signature-line {
+        width: 85%;
+        margin: 0 auto;
+        padding-top: 6px;
+        border-top: 1px solid #222;
+    }
+
+        .signature-line p {
+            font-size: 8px;
+            font-weight: bold;
+            margin-bottom: 2px;
+        }
+
+        .signature-line .signature-id {
+            font-weight: normal;
+        }
+
+    /* =========================================
+           VISTA EN PANTALLA
+           ========================================= */
+
+    @@media screen {
+        .assignment-sheet {
+            box-shadow: 0 0 5px #ccc;
+        }
+    }
+
+    /* =========================================
+           CONFIGURACIÓN DE IMPRESIÓN PDF
+           ========================================= */
+
+    @@page {
+        size: letter portrait;
+        margin: 0.40in;
+    }
+
+    @@media print {
+        html,
+        body {
+            width: 100% !important;
+            height: auto !important;
+            margin: 0 !important;
+            padding: 0 !important;
+            background: #fff !important;
+        }
+
+        body {
+            -webkit-print-color-adjust: exact;
+            print-color-adjust: exact;
+        }
+
+        .d-print-none,
+        nav,
+        footer {
+            display: none !important;
+        }
+
+        .container-fluid {
+            width: 100% !important;
+            max-width: none !important;
+            margin: 0 !important;
+            padding: 0 !important;
+        }
+
+        .assignment-sheet {
+            width: 100% !important;
+            max-width: none !important;
+            min-width: 0 !important;
+            margin: 0 !important;
+            padding: 0 !important;
+            box-shadow: none !important;
+            border: 0 !important;
+            overflow: visible !important;
+        }
+
+        .assignment-header,
+        .asset-details,
+        .responsible-details,
+        .accessories-section,
+        .assignment-signatures {
+            break-inside: avoid;
+            page-break-inside: avoid;
+        }
+
+        .assignment-sheet img {
+            max-width: 100%;
+        }
+
+        .accessories-table {
+            width: 100% !important;
+            max-width: 100% !important;
+        }
+
+            .accessories-table thead {
+                display: table-header-group;
+            }
+
+            .accessories-table tr {
+                break-inside: avoid;
+                page-break-inside: avoid;
+            }
+
+        .assignment-sheet,
+        .assignment-sheet p,
+        .assignment-sheet h3,
+        .assignment-sheet h6,
+        .assignment-sheet span,
+        .assignment-sheet li,
+        .assignment-sheet th,
+        .assignment-sheet td {
+            color: #111 !important;
+        }
+    }
+</style>
+
+<div class="container-fluid my-4 px-4">
+
+    <!-- BOTONES DE ACCIÓN: NO SE IMPRIMEN -->
+    <div class="d-flex justify-content-between align-items-center mb-4 d-print-none">
+        <a asp-page="./Index" class="btn btn-outline-secondary">
+            ← Volver al Panel
+        </a>
+
+        <button type="button"
+                onclick="window.print();"
+                class="btn btn-success fw-bold">
+            🖨️ Descargar / Imprimir PDF (Carta)
+        </button>
+    </div>
+
+    <!-- FORMULARIO COMPLETO -->
+    <div class="assignment-sheet">
+
+        <!-- ENCABEZADO -->
+        <div class="assignment-header">
+
+            <div class="assignment-logo">
+                <img src="~/images/logo.png"
+                     alt="Logo SuperVigilancia" />
+
+                <span>SuperVigilancia</span>
+            </div>
+
+            <div class="assignment-heading">
+                <h3>
+                    FORMULARIO DE DOTACIÓN Y ASIGNACIÓN DE ACTIVOS
+                </h3>
+
+                <p>
+                    Sistema de Inventario y Control QR
+                </p>
+            </div>
+
+        </div>
+
+        <!-- DATOS DEL ACTIVO Y QR -->
+        <div class="asset-details">
+
+            <div class="asset-information">
+
+                <h6 class="section-title">
+                    Datos del Activo
+                </h6>
+
+                <p>
+                    <strong>Nombre:</strong>
+                    @Model.Product?.ProductName
+                </p>
+
+                <p>
+                    <strong>Código:</strong>
+                    @Model.Product?.Code
+                </p>
+
+                <div class="technical-specifications">
+
+                    <h6>
+                        ⚙ Especificaciones Técnicas:
+                    </h6>
+
+                    <ul>
+                        @foreach (var item in Model.Items.Where(i => !i.Complement))
+                        {
+                            <li>
+                                <strong>• @item.DetailName:</strong>
+                                @(string.IsNullOrEmpty(item.DetailsValue)
+                                                            ? "-"
+                                                            : item.DetailsValue)
+                        </li>
+                                                }
+                    </ul>
+
+                </div>
+
+            </div>
+
+            <!-- CÓDIGO QR -->
+            <div class="asset-qr">
+
+                <span class="qr-code-text">
+                    @Model.Product?.Qr
+                </span>
+
+                <div class="qr-image-container">
+                    <img src="@Model.QrImage"
+                         alt="Código QR del activo" />
+                </div>
+
+                <div class="qr-brand">
+                    <img src="~/images/logo.png"
+                         alt="Logo" />
+
+                    <span>SuperVigilancia</span>
+                </div>
+
+                <div class="qr-caption">
+                    Escanee para ver detalles
+                </div>
+
+            </div>
+
+        </div>
+
+        <!-- DATOS DEL RESPONSABLE -->
+        <div class="responsible-details">
+
+            <h6 class="responsible-title">
+                Datos del Responsable / Destino
+            </h6>
+
+            <div class="responsible-columns">
+
+                <div class="responsible-column">
+
+                    <p>
+                        <strong>Personal Asignado:</strong>
+                        @Model.Characteristic.PersonName
+                    </p>
+
+                    <p>
+                        <strong>C.I.:</strong>
+                        @Model.Characteristic.PersonIdentification
+                    </p>
+
+                    <p>
+                        <strong>Teléfono:</strong>
+                        @Model.Characteristic.PersonNumbers
+                    </p>
+
+                </div>
+
+                <div class="responsible-column">
+
+                    <p>
+                        <strong>Departamento:</strong>
+                        @Model.Characteristic.Localization
+                    </p>
+
+                    <p>
+                        <strong>Fecha de Asignación:</strong>
+                        @Model.Characteristic.Date.ToString("dd/MM/yyyy HH:mm")
+                    </p>
+
+                </div>
+
+            </div>
+
+        </div>
+
+        <!-- TABLA DE ACCESORIOS Y COMPLEMENTOS -->
+        <div class="accessories-section">
+
+            <h6 class="accessories-title">
+                Accesorios y Complementos Entregados
+            </h6>
+
+            <table class="accessories-table">
+
+                <thead>
+                    <tr>
+                        <th>Accesorio / Elemento</th>
+                        <th>Cantidad</th>
+                        <th>Observaciones / Serie</th>
+                    </tr>
+                </thead>
+
+                <tbody>
+
+                    @if (Model.Items.Any(i => i.Complement))
+                    {
+                        @foreach (var item in Model.Items.Where(i => i.Complement))
+                        {
+                            <tr>
+                                <td>
+                                    <strong>@item.DetailName</strong>
+                                </td>
+
+                                <td>
+                                    @item.Amount
+                                </td>
+
+                                <td>
+                                    @(string.IsNullOrEmpty(item.DetailsValue)
+                                                                ? "-"
+                                                                : item.DetailsValue)
+                        </td>
+                    </tr>
+                                        }
+                    }
+                    else
+                    {
+                        <tr>
+                            <td colspan="3" style="text-align: center;">
+                                No hay accesorios o complementos adicionales registrados.
+                            </td>
+                        </tr>
+                    }
+
+                </tbody>
+
+            </table>
+
+        </div>
+
+        <!-- FIRMAS DE CONFORMIDAD -->
+        <div class="assignment-signatures">
+
+            <div class="signature-column">
+
+                <div class="signature-line">
+                    <p>Entregado por (Inventarios)</p>
+                </div>
+
+            </div>
+
+            <div class="signature-column">
+
+                <div class="signature-line">
+                    <p>Recibido Conforme (Funcionario)</p>
+
+                    <p class="signature-id">
+                        C.I.: @Model.Characteristic.PersonIdentification
+                    </p>
+                </div>
+
+            </div>
+
+        </div>
+
+    </div>
+
+</div>

@@ -5,16 +5,27 @@
 }
 
 <div class="container-fluid mt-2 px-0">
-    <!-- Título y Botones -->
-    <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center mb-4 gap-3">
+    <!-- Título y Botones Superiores (Alineados horizontalmente en PC) -->
+    <div class="d-flex flex-column flex-lg-row justify-content-between align-items-lg-center mb-4 gap-3">
         <div>
             <h2 class="fw-bold text-dark mb-1 fs-3 fs-md-2">Panel de Inventario y Control QR</h2>
             <p class="text-muted small mb-0">Gestión de activos, códigos QR y asignaciones organizadas.</p>
         </div>
-        <div class="d-flex flex-wrap gap-2 align-items-center">
-            <button type="submit" form="inventoryForm" asp-page-handler="PrintQRs" class="btn btn-dark shadow-sm w-100 w-md-auto">Generar QR en Lote</button>
+        <div class="d-flex flex-row flex-wrap gap-2 align-items-center justify-content-lg-end">
+            <button type="submit" form="inventoryForm" asp-page-handler="PrintQRs" id="btnBatchQR" class="btn btn-dark shadow-sm" disabled>Generar QR en Lote</button>
+            <button type="submit" form="inventoryForm" asp-page-handler="GroupAssign" id="btnGroupAssign" class="btn btn-success shadow-sm" disabled>👥 Asignación Grupal</button>
+            <button type="submit" form="inventoryForm" asp-page-handler="GroupCancelAssign" id="btnGroupCancel" class="btn btn-outline-danger shadow-sm" disabled onclick="return confirm('¿Está seguro de cancelar la asignación de los elementos seleccionados?');">❌ Recuperar Dotación</button>
+            <button type="submit" form="inventoryForm" asp-page-handler="GroupAssignmentForm" id="btnGroupForm" class="btn btn-outline-success shadow-sm" disabled>📄 Formulario de Dotación</button>
         </div>
     </div>
+
+    @if (!string.IsNullOrEmpty(Model.StatusMessage))
+    {
+        <div class="alert alert-success alert-dismissible fade show mb-3" role="alert">
+            @Model.StatusMessage
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+    }
 
     <!-- Buscador responsivo y Selector de Registros por Página -->
     <div class="card shadow-sm border-0 mb-4 rounded-3 bg-white">
@@ -39,7 +50,7 @@
                         <option value="50" selected="@(Model.PageSize == 50)">50</option>
                         <option value="100" selected="@(Model.PageSize == 100)">100</option>
                     </select>
-                    <input type="hidden" name="CurrentPage" value="1" /> <!-- Reiniciar a pág 1 al cambiar tamaño -->
+                    <input type="hidden" name="CurrentPage" value="1" />
                 </div>
             </form>
         </div>
@@ -88,18 +99,23 @@
                                         </td>
                                         <td class="text-end pe-4">
                                             <div class="d-flex align-items-center justify-content-end gap-1 text-nowrap">
-                                                <a asp-page="./ProductChecklist" asp-route-id="@item.Id" asp-route-mode="details" class="btn btn-outline-primary btn-sm px-2">Detalles</a>
+                                                <a asp-page="./CreateProduct" asp-route-id="@item.Id" class="btn btn-outline-primary btn-sm px-2">✏️</a>
 
                                                 @if (item.IsAssigned)
                                                 {
-                                                    <a asp-page="./ProductChecklist" asp-route-id="@item.Id" asp-route-mode="assign" class="btn btn-success btn-sm px-2 fw-bold">Asignado</a>
+                                                    <a asp-page="./ProductChecklist" asp-route-id="@item.Id" class="btn btn-success btn-sm px-2 fw-bold" title="Modificar Asignación">✓</a>
+                                                    <button type="submit" asp-page-handler="CancelAssign" asp-route-id="@item.Id" class="btn btn-outline-danger btn-sm px-2" title="Cancelar Asignación" onclick="return confirm('¿Desea quitar la asignación de este equipo?');">❌</button>
+                                                    <!-- Botón Formulario Individual -->
+                                                    <button type="submit" asp-page-handler="AssignmentForm" asp-route-id="@item.Id" class="btn btn-outline-dark btn-sm px-2" title="Ver Acta de Asignación">📄</button>
                                                 }
                                                 else
                                                 {
-                                                    <a asp-page="./ProductChecklist" asp-route-id="@item.Id" asp-route-mode="assign" class="btn btn-outline-success btn-sm px-2">Asignar</a>
+                                                    <a asp-page="./ProductChecklist" asp-route-id="@item.Id" class="btn btn-outline-success btn-sm px-2" title="Realizar Asignación">👤</a>
                                                 }
 
-                                                <a asp-page="./Visualizations" asp-route-id="@item.Id" class="btn btn-outline-secondary btn-sm px-2">Ver</a>
+                                                <a asp-page="./Visualizations" asp-route-id="@item.Id" class="btn btn-outline-secondary btn-sm px-2">👁️‍🗨️</a>
+                                                <!-- Botón Historial -->
+                                                <a asp-page="./ProductHistory" asp-route-id="@item.Id" class="btn btn-outline-info btn-sm px-2" title="Historial de Asignaciones">🕒</a>
                                             </div>
                                         </td>
                                     </tr>
@@ -121,7 +137,7 @@
                 </div>
             </div>
 
-            <!-- Footer de la tarjeta con paginación adaptable -->
+            <!-- Footer de la tarjeta con paginación -->
             <div class="card-footer bg-white d-flex flex-column flex-md-row justify-content-between align-items-center py-3 px-4 border-top gap-3">
                 <span class="text-muted small text-center text-md-start">Seleccione los elementos deseados para generar etiquetas QR en lote (3x3 cm).</span>
 
@@ -185,6 +201,21 @@
                 localStorage.setItem(STORAGE_KEY, JSON.stringify(ids));
             }
 
+            function updateActionButtonsState() {
+                const storedIds = getStoredIds();
+                const hasSelection = storedIds.length > 0;
+
+                const btnBatchQR = document.getElementById('btnBatchQR');
+                const btnGroupAssign = document.getElementById('btnGroupAssign');
+                const btnGroupCancel = document.getElementById('btnGroupCancel');
+                const btnGroupForm = document.getElementById('btnGroupForm');
+
+                if (btnBatchQR) btnBatchQR.disabled = !hasSelection;
+                if (btnGroupAssign) btnGroupAssign.disabled = !hasSelection;
+                if (btnGroupCancel) btnGroupCancel.disabled = !hasSelection;
+                if (btnGroupForm) btnGroupForm.disabled = !hasSelection;
+            }
+
             const checkboxes = document.querySelectorAll('.productCheckbox');
             let storedIds = getStoredIds();
 
@@ -205,6 +236,7 @@
                     }
                     setStoredIds(storedIds);
                     updateSelectAllState();
+                    updateActionButtonsState();
                 });
             });
 
@@ -223,6 +255,7 @@
                         }
                     });
                     setStoredIds(storedIds);
+                    updateActionButtonsState();
                 });
             }
 
@@ -232,6 +265,7 @@
                 selectAll.checked = checkboxes.length > 0 && allChecked;
             }
             updateSelectAllState();
+            updateActionButtonsState();
 
             const form = document.getElementById('inventoryForm');
             if (form) {

@@ -39,12 +39,15 @@ namespace Inventario_QR.Pages
         public int CurrentPage { get; set; } = 1;
 
         [BindProperty(SupportsGet = true)]
-        public int PageSize { get; set; } = 10; // Hacemos dinámico el tamaño de página
+        public int PageSize { get; set; } = 10;
 
         public int TotalPages { get; set; } = 1;
 
         [BindProperty]
         public List<int> SelectedProductIds { get; set; } = new();
+
+        [TempData]
+        public string StatusMessage { get; set; }
 
         public async Task OnGetAsync()
         {
@@ -97,7 +100,6 @@ namespace Inventario_QR.Pages
                 ).ToList();
             }
 
-            // Validar que el PageSize sea uno de los permitidos por seguridad
             int[] allowedSizes = { 10, 20, 30, 50, 100 };
             if (!allowedSizes.Contains(PageSize))
             {
@@ -125,6 +127,76 @@ namespace Inventario_QR.Pages
 
             string ids = string.Join(",", SelectedProductIds);
             return RedirectToPage("./PrintQRs", new { ids = ids });
+        }
+
+        public IActionResult OnPostGroupAssign()
+        {
+            if (SelectedProductIds == null || !SelectedProductIds.Any())
+            {
+                return RedirectToPage(new { CurrentPage, SearchTerm, PageSize });
+            }
+
+            string ids = string.Join(",", SelectedProductIds);
+            return RedirectToPage("./GroupAssign", new { Ids = ids });
+        }
+
+        // Manejador para Cancelar Asignación Global (En grupo)
+        public async Task<IActionResult> OnPostGroupCancelAssignAsync()
+        {
+            if (SelectedProductIds == null || !SelectedProductIds.Any())
+            {
+                return RedirectToPage(new { CurrentPage, SearchTerm, PageSize });
+            }
+
+            var characteristics = await _context.Characteristics
+                .Where(c => SelectedProductIds.Contains(c.ProductId) && c.Active)
+                .ToListAsync();
+
+            foreach (var ch in characteristics)
+            {
+                ch.Active = false;
+            }
+
+            if (characteristics.Any())
+            {
+                await _context.SaveChangesAsync();
+                StatusMessage = "Asignaciones seleccionadas canceladas y guardadas en el historial.";
+            }
+
+            return RedirectToPage(new { CurrentPage, SearchTerm, PageSize });
+        }
+
+        // Manejador para Cancelar Asignación Individual
+        public async Task<IActionResult> OnPostCancelAssignAsync(int id)
+        {
+            var characteristic = await _context.Characteristics
+                .FirstOrDefaultAsync(c => c.ProductId == id && c.Active);
+
+            if (characteristic != null)
+            {
+                characteristic.Active = false;
+                await _context.SaveChangesAsync();
+                StatusMessage = "Asignación cancelada y guardada en el historial.";
+            }
+
+            return RedirectToPage(new { CurrentPage, SearchTerm, PageSize });
+        }
+
+        public IActionResult OnPostAssignmentForm(int id)
+        {
+            return RedirectToPage("./AssignmentForm", new { id = id });
+        }
+
+        // Manejador para Formulario de Asignación Global (En Lote)
+        public IActionResult OnPostGroupAssignmentForm()
+        {
+            if (SelectedProductIds == null || !SelectedProductIds.Any())
+            {
+                return RedirectToPage(new { CurrentPage, SearchTerm, PageSize });
+            }
+
+            string ids = string.Join(",", SelectedProductIds);
+            return RedirectToPage("./GroupAssignmentForm", new { ids = ids });
         }
     }
 }

@@ -46,3 +46,34 @@ button.accept-policy {
   white-space: nowrap;
   line-height: 60px;
 }
+
+/* ========================================== */
+/* ESTILOS PARA ACTAS DE ASIGNACIÓN Y IMPRESIÓN */
+/* ========================================== */
+
+.assignment-sheet {
+    background: #ffffff;
+    max-width: 210mm;
+    margin: 20px auto;
+    padding: 15mm;
+    border-radius: 8px;
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+}
+
+@media print {
+    body {
+        background: transparent !important;
+    }
+
+    .no-print {
+        display: none !important;
+    }
+
+    .assignment-sheet {
+        margin: 0;
+        box-shadow: none;
+        max-width: 100%;
+        padding: 10mm;
+        page-break-after: always;
+    }
+}

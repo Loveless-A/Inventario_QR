@@ -1,0 +1,401 @@
+﻿@page
+@model Inventario_QR.Pages.GroupAssignModel
+@{
+    ViewData["Title"] = "Asignación en Grupo de Activos";
+    var antiForgeryToken = HttpContext.RequestServices.GetRequiredService<Microsoft.AspNetCore.Antiforgery.IAntiforgery>().GetAndStoreTokens(HttpContext).RequestToken;
+}
+
+<input type="hidden" id="__RequestVerificationToken" value="@antiForgeryToken" />
+
+<div class="container mt-4 mb-5">
+    <div class="card shadow border-0">
+        <div class="card-header bg-success text-white d-flex justify-content-between align-items-center py-3">
+            <h4 class="mb-0">👥 Asignación en Grupo de Activos Seleccionados</h4>
+        </div>
+        <div class="card-body">
+
+            <form method="post">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <a asp-page="./Index" class="btn btn-outline-secondary">← Volver al Panel</a>
+                </div>
+
+                <div asp-validation-summary="All" class="text-danger mb-3"></div>
+
+                @for (int i = 0; i < Model.SelectedIds.Count; i++)
+                {
+                    <input type="hidden" name="SelectedIds[@i]" value="@Model.SelectedIds[i]" />
+                }
+
+                <!-- DATOS GENERALES DE ASIGNACIÓN -->
+                <div class="card bg-light border-0 p-4 mb-4 shadow-sm">
+                    <h5 class="mb-3 text-success">👤 Datos de Asignación y Destino</h5>
+
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label class="form-label fw-bold">Personal Asignado</label>
+                            <div class="input-group">
+                                <input class="form-control" list="personsOptions" id="selectedPersonInput" placeholder="🔍 Buscar por nombre o CI..." required />
+                                <datalist id="personsOptions">
+                                    @foreach (var p in Model.AllPersons)
+                                    {
+                                        <option value="@p.LastName (CI: @p.Identification)" data-id="@p.Id"></option>
+                                    }
+                                </datalist>
+                                <input type="hidden" asp-for="SelectedPersonId" id="SelectedPersonId" />
+                            </div>
+                        </div>
+
+                        <div class="col-md-6">
+                            <label asp-for="Localization" class="form-label fw-bold text-success">📍 Departamento de Destino</label>
+                            <select asp-for="Localization" class="form-select" required>
+                                <option value="">-- Seleccione un Departamento --</option>
+                                @foreach (var depto in Model.DepartamentosBolivia)
+                                {
+                                    <option value="@depto">@depto</option>
+                                }
+                            </select>
+                        </div>
+
+                        <div class="col-12">
+                            <label asp-for="AssignmentComment" class="form-label fw-bold text-success">💬 Comentario de Entrega / Estado de la Máquina</label>
+                            <textarea asp-for="AssignmentComment" class="form-control" rows="2" placeholder="Ej. Se entregan equipos en lote para el departamento..."></textarea>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- REGISTRAR COMPLEMENTO GLOBAL -->
+                <div class="card bg-light border-0 p-3 mb-4 shadow-sm">
+                    <h6 class="text-success fw-bold mb-2">➕ Registrar Complemento / Elemento</h6>
+                    <div class="row g-2 align-items-center">
+                        <div class="col-md-7">
+                            <input type="text" id="newComplementInput" class="form-control" placeholder="Nombre (Ej. Procesador, Mouse)" />
+                        </div>
+                        <div class="col-md-3">
+                            <div class="form-check">
+                                <input type="checkbox" class="form-check-input" checked disabled />
+                                <label class="form-check-label small fw-bold">¿Es un Complemento?</label>
+                            </div>
+                        </div>
+                        <div class="col-md-2">
+                            <button type="button" id="btnRegisterComplement" class="btn btn-success w-100 fw-bold">+ Registrar</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- LISTA DE PRODUCTOS CON RESPONSIVE Y VISOR LIMPIO DE CARACTERÍSTICAS -->
+                <div class="mb-4">
+                    @for (int pIdx = 0; pIdx < Model.ProductGroups.Count; pIdx++)
+                    {
+                        var prod = Model.ProductGroups[pIdx];
+                        string collapseId = $"collapseProd_{pIdx}";
+
+                        <div class="border rounded mb-4 shadow-sm bg-white overflow-hidden">
+                            <!-- CABECERA FIJA: Nombre del Producto + Solo sus características reales -->
+                            <div class="p-3 bg-light border-bottom position-relative">
+                                <div class="d-flex justify-content-between align-items-start flex-wrap gap-2">
+                                    <div class="flex-grow-1">
+                                        <h4 class="text-dark fw-bold mb-2 d-flex flex-wrap align-items-center gap-2">
+                                            <span>@prod.ProductName</span>
+                                            <span class="badge bg-secondary fs-6">@prod.Code</span>
+                                            <span class="badge bg-outline-dark border text-dark fs-6">QR: @prod.Qr</span>
+                                        </h4>
+
+                                        <!-- Características Principales (Solo las que existen, sino mensaje de Sin características) -->
+                                        <div class="ps-1 mt-2">
+                                            @{
+                                                var mainCharacteristics = prod.Details.Where(item => !item.Complement).ToList();
+                                            }
+                                            @if (mainCharacteristics.Any())
+                                            {
+                                                @foreach (var ch in mainCharacteristics)
+                                                {
+                                                    <div class="mb-1 text-dark fs-6">
+                                                        <strong>@ch.DetailName:</strong>
+                                                        <span class="text-muted ms-1">@ch.DetailsValue</span>
+                                                    </div>
+                                                }
+                                            }
+                                            else
+                                            {
+                                                <div class="text-muted small fst-italic">Sin características registradas</div>
+                                            }
+                                        </div>
+                                    </div>
+
+                                    <!-- Botón de Flecha Responsive para el Acordeón de Complementos -->
+                                    <button class="btn btn-sm btn-outline-secondary rounded-circle ms-auto" type="button" data-bs-toggle="collapse" data-bs-target="#@collapseId" aria-expanded="true" aria-controls="@collapseId">
+                                        ▼
+                                    </button>
+                                </div>
+                            </div>
+
+                            <!-- CONTENIDO DESPLEGABLE: Solo la Lista de Complementos -->
+                            <div id="@collapseId" class="collapse show">
+                                <div class="p-3 p-md-4">
+                                    <h6 class="text-secondary fw-bold mb-3">📦 Lista de Complementos y Elementos</h6>
+
+                                    <div class="mb-3">
+                                        <input type="text" class="form-control form-control-sm searchFilterGroup" placeholder="🔍 Buscar elemento..." />
+                                    </div>
+
+                                    <div class="table-responsive">
+                                        <table class="table table-sm table-hover align-middle mb-0 search-table-group">
+                                            <thead class="table-light">
+                                                <tr>
+                                                    <th style="width: 10%;" class="text-center">Seleccionar</th>
+                                                    <th style="width: 32%;">Elemento</th>
+                                                    <th style="width: 12%;">Cantidad</th>
+                                                    <th style="width: 34%;">Observaciones / Serie</th>
+                                                    <th style="width: 12%;" class="text-center">Gestión Catálogo</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody class="complement-tbody">
+                                                @{
+                                                    var complementItems = prod.Details.Where(item => item.Complement).ToList();
+                                                }
+                                                @foreach (var comp in complementItems)
+                                                {
+                                                    <tr class="searchable-row-group" data-detail-id="@comp.DetailsId">
+                                                        <td class="text-center">
+                                                            <input type="checkbox" class="form-check-input checklist-checkbox" @(comp.IsSelected ? "checked" : "") />
+                                                        </td>
+                                                        <td>
+                                                            <strong class="detail-name-text">@comp.DetailName</strong>
+                                                            <span class="badge bg-secondary ms-1" style="font-size: 0.65rem;">(Complemento)</span>
+                                                        </td>
+                                                        <td>
+                                                            <input type="number" value="@comp.Amount" class="form-control form-control-sm input-amount" min="1" style="max-width: 80px;" @(comp.IsSelected ? "" : "disabled") />
+                                                        </td>
+                                                        <td>
+                                                            <input type="text" value="@comp.DetailsValue" class="form-control form-control-sm input-details" placeholder="Ej. Serie, marca..." @(comp.IsSelected ? "" : "disabled") />
+                                                        </td>
+                                                        <td class="text-center">
+                                                            <div class="btn-group" role="group">
+                                                                <button type="button" class="btn btn-sm btn-outline-warning btn-edit-catalog" title="Modificar">✏️</button>
+                                                                <button type="button" class="btn btn-sm btn-outline-danger btn-delete-catalog" title="Eliminar">🗑️</button>
+                                                            </div>
+                                                        </td>
+                                                    </tr>
+                                                }
+                                            </tbody>
+                                        </table>
+                                    </div>
+
+                                </div>
+                            </div>
+                        </div>
+                    }
+                </div>
+
+                <!-- BOTÓN DE GUARDADO FINAL -->
+                <div class="d-flex justify-content-between align-items-center mt-4 pt-3 border-top flex-wrap gap-2">
+                    <a asp-page="./Index" class="btn btn-outline-secondary">Cancelar</a>
+                    <button type="submit" class="btn btn-success fw-bold px-5 shadow-sm">
+                        💾 Guardar Asignación en Grupo
+                    </button>
+                </div>
+            </form>
+
+        </div>
+    </div>
+</div>
+
+<!-- MODAL VERDE DEL SISTEMA PARA MODIFICAR DETALLE -->
+<div class="modal fade" id="editDetailModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow">
+            <div class="modal-header bg-success text-white">
+                <h5 class="modal-header-title mb-0 fw-bold">✏️ Modificar Detalle / Complemento</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body p-4">
+                <input type="hidden" id="modalDetailId" />
+                <div class="mb-3">
+                    <label class="form-label fw-bold">Nombre del Detalle</label>
+                    <input type="text" id="modalDetailNameInput" class="form-control" placeholder="Nombre..." />
+                </div>
+            </div>
+            <div class="modal-footer bg-light border-0">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                <button type="button" id="btnSaveModalDetail" class="btn btn-success fw-bold">Guardar Detalle</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            const token = document.getElementById('__RequestVerificationToken').value;
+
+            // Datalist Persona
+            const personInput = document.getElementById('selectedPersonInput');
+            const personIdInput = document.getElementById('SelectedPersonId');
+            const datalist = document.getElementById('personsOptions');
+
+            if (personInput && personIdInput && datalist) {
+                personInput.addEventListener('input', function () {
+                    const val = personInput.value.trim();
+                    const options = datalist.querySelectorAll('option');
+                    let foundId = '';
+
+                    options.forEach(opt => {
+                        if (opt.value === val) {
+                            foundId = opt.getAttribute('data-id');
+                        }
+                    });
+
+                    personIdInput.value = foundId;
+                });
+            }
+
+            // Habilitar/Deshabilitar inputs por fila al marcar checkbox
+            document.addEventListener('change', function (e) {
+                if (e.target.classList.contains('checklist-checkbox')) {
+                    const row = e.target.closest('tr');
+                    const inputs = row.querySelectorAll('.input-amount, .input-details');
+                    inputs.forEach(input => {
+                        input.disabled = !e.target.checked;
+                    });
+                }
+            });
+
+            // Buscador en tiempo real por tarjeta de producto
+            document.querySelectorAll('.searchFilterGroup').forEach(input => {
+                input.addEventListener('input', function () {
+                    const term = this.value.toLowerCase().trim();
+                    const container = this.closest('.collapse');
+                    const rows = container.querySelectorAll('.searchable-row-group');
+
+                    rows.forEach(row => {
+                        const text = row.textContent.toLowerCase();
+                        row.style.display = text.includes(term) ? '' : 'none';
+                    });
+                });
+            });
+
+            // Registrar Complemento Global AJAX
+            const btnRegister = document.getElementById('btnRegisterComplement');
+            const complementInput = document.getElementById('newComplementInput');
+
+            if (btnRegister && complementInput) {
+                btnRegister.addEventListener('click', async function () {
+                    const val = complementInput.value.trim();
+                    if (!val) {
+                        alert("Por favor ingrese el nombre del complemento.");
+                        return;
+                    }
+
+                    try {
+                        const response = await fetch(`?handler=AddComplement&complementName=${encodeURIComponent(val)}`, {
+                            method: 'POST',
+                            headers: { 'RequestVerificationToken': token }
+                        });
+                        const result = await response.json();
+
+                        if (result.success) {
+                            complementInput.value = '';
+                            document.querySelectorAll('.complement-tbody').forEach(tbody => {
+                                const tr = document.createElement('tr');
+                                tr.className = 'searchable-row-group';
+                                tr.setAttribute('data-detail-id', result.id);
+                                tr.innerHTML = `
+                                    <td class="text-center">
+                                        <input type="checkbox" class="form-check-input checklist-checkbox" />
+                                    </td>
+                                    <td>
+                                        <strong class="detail-name-text">${result.name}</strong>
+                                        <span class="badge bg-secondary ms-1" style="font-size: 0.65rem;">(Complemento)</span>
+                                    </td>
+                                    <td>
+                                        <input type="number" value="1" class="form-control form-control-sm input-amount" min="1" style="max-width: 80px;" disabled />
+                                    </td>
+                                    <td>
+                                        <input type="text" value="" class="form-control form-control-sm input-details" placeholder="Ej. Serie, marca..." disabled />
+                                    </td>
+                                    <td class="text-center">
+                                        <div class="btn-group" role="group">
+                                            <button type="button" class="btn btn-sm btn-outline-warning btn-edit-catalog" title="Modificar">✏️</button>
+                                            <button type="button" class="btn btn-sm btn-outline-danger btn-delete-catalog" title="Eliminar">🗑️</button>
+                                        </div>
+                                    </td>
+                                `;
+                                tbody.appendChild(tr);
+                            });
+                        } else {
+                            alert("Error: " + result.message);
+                        }
+                    } catch (err) {
+                        console.error(err);
+                    }
+                });
+            }
+
+            // MODAL UI DE EDICIÓN
+            const editModalEl = document.getElementById('editDetailModal');
+            const editModal = new bootstrap.Modal(editModalEl);
+            const modalDetailId = document.getElementById('modalDetailId');
+            const modalDetailNameInput = document.getElementById('modalDetailNameInput');
+            const btnSaveModalDetail = document.getElementById('btnSaveModalDetail');
+
+            document.addEventListener('click', function (e) {
+                if (e.target.classList.contains('btn-edit-catalog') || e.target.closest('.btn-edit-catalog')) {
+                    const row = e.target.closest('tr');
+                    const detailId = row.getAttribute('data-detail-id');
+                    const currentName = row.querySelector('.detail-name-text').textContent.trim();
+
+                    modalDetailId.value = detailId;
+                    modalDetailNameInput.value = currentName;
+                    editModal.show();
+                }
+
+                if (e.target.classList.contains('btn-delete-catalog') || e.target.closest('.btn-delete-catalog')) {
+                    const row = e.target.closest('tr');
+                    const detailId = row.getAttribute('data-detail-id');
+
+                    if (confirm("¿Estás segura de eliminar este elemento del catálogo?")) {
+                        fetch(`?handler=DeleteCatalogDetail&detailId=${detailId}`, {
+                            method: 'POST',
+                            headers: { 'RequestVerificationToken': token }
+                        })
+                        .then(res => res.json())
+                        .then(data => {
+                            if (data.success) {
+                                document.querySelectorAll(`tr[data-detail-id="${detailId}"]`).forEach(r => r.remove());
+                            } else {
+                                alert("Error: " + data.message);
+                            }
+                        })
+                        .catch(err => console.error(err));
+                    }
+                }
+            });
+
+            btnSaveModalDetail.addEventListener('click', async function () {
+                const id = modalDetailId.value;
+                const newName = modalDetailNameInput.value.trim();
+
+                if (!newName) return;
+
+                try {
+                    const response = await fetch(`?handler=UpdateCatalogDetail&detailId=${id}&newName=${encodeURIComponent(newName)}`, {
+                        method: 'POST',
+                        headers: { 'RequestVerificationToken': token }
+                    });
+                    const data = await response.json();
+
+                    if (data.success) {
+                        document.querySelectorAll(`tr[data-detail-id="${id}"]`).forEach(r => {
+                            r.querySelector('.detail-name-text').textContent = newName;
+                        });
+                        editModal.hide();
+                    } else {
+                        alert("Error: " + data.message);
+                    }
+                } catch (err) {
+                    console.error(err);
+                }
+            });
+        });
+    </script>
+}
