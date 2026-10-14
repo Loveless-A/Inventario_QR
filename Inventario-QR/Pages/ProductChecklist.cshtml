@@ -56,7 +56,7 @@
     <form method="post" asp-page-handler="SaveAssign">
         <input type="hidden" name="id" value="@Model.Id" />
 
-        <!-- CONTENEDOR PRINCIPAL RESPONSIVO (2 Columnas en Escritorio | 1 Columna en Celular) -->
+        <!-- CONTENEDOR PRINCIPAL RESPONSIVO -->
         <div class="row g-3 align-items-start">
 
             <!-- COLUMNA IZQUIERDA -->
@@ -108,7 +108,7 @@
                         </div>
 
                         <div class="col-12">
-                            <label asp-for="AssignmentComment" class="form-label fw-bold text-success small mb-1">💬 Comentario de Entrega / Estado de la Máquina</label>
+                            <label asp-for="AssignmentComment" class="form-label fw-bold text-success small mb-1">💬 Comentario de Entrega / Estado de la Máquina (Opcional)</label>
                             <textarea asp-for="AssignmentComment" class="form-control form-control-sm" rows="2" placeholder="Ej. Equipos en perfecto estado..."></textarea>
                         </div>
                     </div>
@@ -142,7 +142,7 @@
 
             </div>
 
-            <!-- COLUMNA DERECHA (Lista ÚNICAMENTE de Complementos) -->
+            <!-- COLUMNA DERECHA -->
             <div class="col-12 col-xl-6">
                 <div class="card bg-light border-0 p-3 shadow-sm rounded-3">
                     @{
@@ -258,7 +258,7 @@
 
                     <!-- CARGO -->
                     <div class="mb-3">
-                        <label class="form-label fw-bold small">Cargo (Position)</label>
+                        <label class="form-label fw-bold small">Cargo</label>
                         <div class="input-group input-group-sm">
                             <select asp-for="ModalNewPersonPositionId" id="ModalNewPersonPositionId" class="form-select">
                                 <option value="">-- Seleccionar Cargo --</option>
@@ -278,7 +278,7 @@
 
                     <!-- DEPENDENCIA -->
                     <div class="mb-3">
-                        <label class="form-label fw-bold small">Área / Dependencia (Dependence)</label>
+                        <label class="form-label fw-bold small">Área / Dependencia</label>
                         <div class="input-group input-group-sm">
                             <select asp-for="ModalNewPersonDependenceId" id="ModalNewPersonDependenceId" class="form-select">
                                 <option value="">-- Seleccionar Dependencia --</option>
@@ -359,101 +359,100 @@
 @section Scripts {
     <script>
         document.addEventListener('DOMContentLoaded', function () {
-        const personInput = document.getElementById('selectedPersonInput');
-        const personIdInput = document.getElementById('SelectedPersonId');
-        const datalist = document.getElementById('personsOptions');
-        const btnPersonAction = document.getElementById('btnPersonAction');
+            const personInput = document.getElementById('selectedPersonInput');
+            const personIdInput = document.getElementById('SelectedPersonId');
+            const datalist = document.getElementById('personsOptions');
+            const btnPersonAction = document.getElementById('btnPersonAction');
 
-        const personModalEl = document.getElementById('registerPersonModal');
-        const personModal = new bootstrap.Modal(personModalEl);
+            const personModalEl = document.getElementById('registerPersonModal');
+            const personModal = new bootstrap.Modal(personModalEl);
 
-        // Función para actualizar el botón compacto (➕ o ✏️) según el texto
-        function updatePersonButtonState() {
-            const val = personInput.value.trim();
-            let foundOpt = null;
+            const positionModalEl = document.getElementById('positionModal');
+            const positionModal = new bootstrap.Modal(positionModalEl);
 
-            if (val) {
-                const options = datalist.querySelectorAll('option');
-                options.forEach(opt => {
-                    if (opt.value === val) {
-                        foundOpt = opt;
-                    }
-                });
-            }
+            const dependenceModalEl = document.getElementById('dependenceModal');
+            const dependenceModal = new bootstrap.Modal(dependenceModalEl);
 
-            if (foundOpt) {
-                personIdInput.value = foundOpt.getAttribute('data-id');
-                btnPersonAction.innerHTML = '✏️';
-                btnPersonAction.className = 'btn btn-outline-warning text-dark fw-bold px-3';
-                btnPersonAction.title = 'Modificar Persona';
-            } else {
-                personIdInput.value = '';
-                btnPersonAction.innerHTML = '➕';
-                btnPersonAction.className = 'btn btn-outline-success fw-bold px-3';
-                btnPersonAction.title = 'Registrar Nueva Persona';
-            }
-        }
-
-        if (personInput && btnPersonAction) {
-            personInput.addEventListener('input', updatePersonButtonState);
-            personInput.addEventListener('change', updatePersonButtonState);
-            updatePersonButtonState(); // Estado inicial
-
-            // Al hacer clic en el botón (➕ o ✏️)
-            btnPersonAction.addEventListener('click', function () {
+            function updatePersonButtonState() {
                 const val = personInput.value.trim();
-                let matchedOption = null;
+                let foundOpt = null;
 
                 if (val) {
                     const options = datalist.querySelectorAll('option');
                     options.forEach(opt => {
                         if (opt.value === val) {
-                            matchedOption = opt;
+                            foundOpt = opt;
                         }
                     });
                 }
 
-                const posSelect = document.getElementById('ModalNewPersonPositionId');
-                const depSelect = document.getElementById('ModalNewPersonDependenceId');
-
-                if (matchedOption) {
-                    // Modo Modificar: Llena los datos y selecciona los cargos/dependencias correctos
-                    document.getElementById('ModalPersonId').value = matchedOption.getAttribute('data-id');
-                    document.getElementById('ModalNewPersonLastName').value = matchedOption.getAttribute('data-lastname') || '';
-                    document.getElementById('ModalNewPersonIdentification').value = matchedOption.getAttribute('data-identification') || '';
-                    document.getElementById('ModalNewPersonNumbers').value = matchedOption.getAttribute('data-numbers') || '';
-                    document.getElementById('ModalNewPersonIsActive').checked = matchedOption.getAttribute('data-active') === 'True';
-                    document.getElementById('personModalTitle').innerText = 'Modificar Persona';
-
-                    // Asignar Cargo y disparar evento change para mostrar el lápiz
-                    const posId = matchedOption.getAttribute('data-positionid');
-                    posSelect.value = (posId && posId !== '') ? posId : '';
-                    posSelect.dispatchEvent(new Event('change'));
-
-                    // Asignar Dependencia y disparar evento change para mostrar el lápiz
-                    const depId = matchedOption.getAttribute('data-dependenceid');
-                    depSelect.value = (depId && depId !== '') ? depId : '';
-                    depSelect.dispatchEvent(new Event('change'));
+                if (foundOpt) {
+                    personIdInput.value = foundOpt.getAttribute('data-id');
+                    btnPersonAction.innerHTML = '✏️';
+                    btnPersonAction.className = 'btn btn-outline-warning text-dark fw-bold px-3';
+                    btnPersonAction.title = 'Modificar Persona';
                 } else {
-                    // Modo Nuevo: Limpia todo el modal
-                    document.getElementById('ModalPersonId').value = '';
-                    document.getElementById('ModalNewPersonLastName').value = '';
-                    document.getElementById('ModalNewPersonIdentification').value = '';
-                    document.getElementById('ModalNewPersonNumbers').value = '';
-
-                    posSelect.value = '';
-                    posSelect.dispatchEvent(new Event('change'));
-
-                    depSelect.value = '';
-                    depSelect.dispatchEvent(new Event('change'));
-
-                    document.getElementById('ModalNewPersonIsActive').checked = true;
-                    document.getElementById('personModalTitle').innerText = 'Registrar Nueva Persona';
+                    personIdInput.value = '';
+                    btnPersonAction.innerHTML = '➕';
+                    btnPersonAction.className = 'btn btn-outline-success fw-bold px-3';
+                    btnPersonAction.title = 'Registrar Nueva Persona';
                 }
-            });
-        }
+            }
 
-            // --- Tus modales de Cargo y Dependencia intactos ---
+            if (personInput && btnPersonAction) {
+                personInput.addEventListener('input', updatePersonButtonState);
+                personInput.addEventListener('change', updatePersonButtonState);
+                updatePersonButtonState();
+
+                btnPersonAction.addEventListener('click', function () {
+                    const val = personInput.value.trim();
+                    let matchedOption = null;
+
+                    if (val) {
+                        const options = datalist.querySelectorAll('option');
+                        options.forEach(opt => {
+                            if (opt.value === val) {
+                                matchedOption = opt;
+                            }
+                        });
+                    }
+
+                    const posSelect = document.getElementById('ModalNewPersonPositionId');
+                    const depSelect = document.getElementById('ModalNewPersonDependenceId');
+
+                    if (matchedOption) {
+                        document.getElementById('ModalPersonId').value = matchedOption.getAttribute('data-id');
+                        document.getElementById('ModalNewPersonLastName').value = matchedOption.getAttribute('data-lastname') || '';
+                        document.getElementById('ModalNewPersonIdentification').value = matchedOption.getAttribute('data-identification') || '';
+                        document.getElementById('ModalNewPersonNumbers').value = matchedOption.getAttribute('data-numbers') || '';
+                        document.getElementById('ModalNewPersonIsActive').checked = matchedOption.getAttribute('data-active') === 'True';
+                        document.getElementById('personModalTitle').innerText = 'Modificar Persona';
+
+                        const posId = matchedOption.getAttribute('data-positionid');
+                        posSelect.value = (posId && posId !== '') ? posId : '';
+                        posSelect.dispatchEvent(new Event('change'));
+
+                        const depId = matchedOption.getAttribute('data-dependenceid');
+                        depSelect.value = (depId && depId !== '') ? depId : '';
+                        depSelect.dispatchEvent(new Event('change'));
+                    } else {
+                        document.getElementById('ModalPersonId').value = '';
+                        document.getElementById('ModalNewPersonLastName').value = '';
+                        document.getElementById('ModalNewPersonIdentification').value = '';
+                        document.getElementById('ModalNewPersonNumbers').value = '';
+
+                        posSelect.value = '';
+                        posSelect.dispatchEvent(new Event('change'));
+
+                        depSelect.value = '';
+                        depSelect.dispatchEvent(new Event('change'));
+
+                        document.getElementById('ModalNewPersonIsActive').checked = true;
+                        document.getElementById('personModalTitle').innerText = 'Registrar Nueva Persona';
+                    }
+                });
+            }
+
             document.getElementById('btnOpenPositionModal').addEventListener('click', function () {
                 document.getElementById('SubModalPositionId').value = '';
                 document.getElementById('SubModalPositionName').value = '';
@@ -606,7 +605,6 @@
                 .catch(err => console.error(err));
             });
 
-                    // Habilitar / Deshabilitar los campos de Cantidad y Observaciones al marcar/desmarcar
             const checklistCheckboxes = document.querySelectorAll('.checklist-checkbox');
 
             checklistCheckboxes.forEach(checkbox => {

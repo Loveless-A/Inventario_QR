@@ -126,7 +126,7 @@
         gap: 5mm;
     }
 
-    /* ETIQUETA DE BORDE A BORDE */
+    /* ETIQUETA COMPACTA Y EQUILIBRADA */
 
     .qr-label-card {
         width: var(--label-width);
@@ -135,9 +135,8 @@
         display: flex;
         flex-direction: column;
         align-items: center;
-        justify-content: space-between;
-        gap: 0;
-        padding: 0.5mm; /* Margen técnico mínimo para no pisar el borde cortante */
+        justify-content: space-evenly; /* Distribuye el espacio de forma equilibrada y cercana */
+        padding: 1.2mm;
         background: #fff;
         color: #111;
         border: 0.2mm solid #cbd5e1;
@@ -149,105 +148,70 @@
         page-break-inside: avoid;
     }
 
-        /* NOMBRE DEL PRODUCTO */
-
-        .qr-label-card.has-details .product-name {
-            display: -webkit-box;
-            -webkit-box-orient: vertical;
-            -webkit-line-clamp: 2;
-            width: 100%;
-            flex: 0 0 auto;
-            font-size: clamp(5pt, 2mm, 7pt);
-            font-weight: 700;
-            line-height: 1.05;
-            overflow-wrap: anywhere;
-            overflow: hidden;
-            margin: 0;
-        }
-
         /* CÓDIGO DEL PRODUCTO */
-
-        .qr-label-card.has-details .product-code {
+        .qr-label-card .product-code {
             width: 100%;
             flex: 0 0 auto;
-            font-size: 5pt;
+            font-size: calc(var(--label-width) * 0.08);
+            font-weight: 700;
             line-height: 1;
-            color: #475569;
-            overflow-wrap: anywhere;
-            overflow: hidden;
+            color: #1e293b;
             margin: 0;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
         }
 
-        /* IMAGEN QR DE BORDE A BORDE */
-
+        /* IMAGEN DEL CÓDIGO QR */
         .qr-label-card .qr-img {
             display: block;
-            width: 100%;
-            height: 100%;
-            max-width: 100%;
-            max-height: 100%;
-            min-width: 0;
-            min-height: 0;
-            flex: 1 1 auto;
-            object-fit: fill;
-            margin: 0;
-            padding: 0;
-        }
-
-        /* QR EN ETIQUETAS CON DATOS: OCUPANDO EL MÁXIMO ANCHO POSIBLE */
-
-        .qr-label-card.has-details .qr-img {
-            display: block;
-            width: 100%;
+            width: auto;
             height: auto;
-            min-width: 0;
-            min-height: 0;
-            max-width: 100%;
-            flex: 1 1 auto;
-            align-self: center;
+            max-width: 88%;
+            max-height: 60%;
+            flex: 0 1 auto;
             object-fit: contain;
-            margin: 0;
-            padding: 0;
+            margin: 0 auto;
         }
 
-        /* TEXTO DEL QR */
-
-        .qr-label-card.has-details .qr-text {
+        /* TEXTO DEL CÓDIGO QR */
+        .qr-label-card .qr-text {
             width: 100%;
             flex: 0 0 auto;
-            font-size: 4pt;
+            font-size: calc(var(--label-width) * 0.072);
             font-weight: 700;
             line-height: 1;
-            overflow-wrap: anywhere;
-            overflow: hidden;
+            color: #334155;
             margin: 0;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
         }
 
-    /* LOGO Y NOMBRE SUPERVIGILANCIA */
+        /* MARCA / LOGO SUPERVIGILANCIA */
+        .qr-label-card .qr-brand {
+            display: flex;
+            flex: 0 0 auto;
+            align-items: center;
+            justify-content: center;
+            gap: 2px;
+            width: 100%;
+            margin: 0;
+            font-size: calc(var(--label-width) * 0.068);
+            font-weight: 600;
+            line-height: 1;
+            white-space: nowrap;
+            overflow: hidden;
+        }
 
-    .qr-brand {
-        display: flex;
-        flex: 0 0 auto;
-        align-items: center;
-        justify-content: center;
-        gap: 2px;
-        width: 100%;
-        margin: 0;
-        font-size: 4.5pt;
-        line-height: 1;
-        white-space: nowrap;
-        overflow: hidden;
-    }
-
-    .qr-brand-logo {
-        display: block;
-        width: 7px;
-        height: 7px;
-        max-width: 7px;
-        max-height: 7px;
-        object-fit: contain;
-        flex: 0 0 7px;
-    }
+        .qr-label-card .qr-brand-logo {
+            display: inline-block;
+            width: calc(var(--label-width) * 0.09);
+            height: calc(var(--label-width) * 0.09);
+            max-width: 18px;
+            max-height: 18px;
+            object-fit: contain;
+        }
 
     /* MENSAJE SIN PRODUCTOS */
 
@@ -266,8 +230,7 @@
     }
 
     @@media print {
-        html,
-        body {
+        html, body {
             margin: 0 !important;
             padding: 0 !important;
             background: #fff !important;
@@ -312,81 +275,8 @@
             box-shadow: none !important;
             -webkit-print-color-adjust: exact;
             print-color-adjust: exact;
-            padding: 0.2mm !important;
+            padding: 1mm !important;
         }
-            /* ETIQUETAS PEQUEÑAS: SOLAMENTE QR */
-            .qr-label-card.qr-only {
-                padding: 0.2mm !important;
-                gap: 0 !important;
-                justify-content: center !important;
-                align-items: center !important;
-            }
-
-                .qr-label-card.qr-only .qr-img {
-                    display: block !important;
-                    width: 100% !important;
-                    height: 100% !important;
-                    max-width: 100% !important;
-                    max-height: 100% !important;
-                    flex: 1 1 auto !important;
-                    object-fit: contain !important;
-                }
-            /* ETIQUETAS DE 3 X 3 CM O MÁS */
-            .qr-label-card.has-details {
-                padding: 0.3mm !important;
-                gap: 0 !important;
-                justify-content: space-between !important;
-                align-items: center !important;
-                overflow: hidden !important;
-                box-sizing: border-box !important;
-            }
-
-                .qr-label-card.has-details .product-code {
-                    width: 100% !important;
-                    flex: 0 0 auto !important;
-                    margin: 0 !important;
-                    padding: 0 !important;
-                    font-size: 5pt !important;
-                    line-height: 1 !important;
-                }
-
-                .qr-label-card.has-details .qr-img {
-                    display: block !important;
-                    width: 100% !important;
-                    height: auto !important;
-                    max-width: 100% !important;
-                    flex: 1 1 auto !important;
-                    object-fit: contain !important;
-                    margin: 0 !important;
-                    padding: 0 !important;
-                }
-
-                .qr-label-card.has-details .qr-text {
-                    width: 100% !important;
-                    flex: 0 0 auto !important;
-                    margin: 0 !important;
-                    padding: 0 !important;
-                    font-size: 4.5pt !important;
-                    line-height: 1 !important;
-                }
-
-            .qr-label-card .qr-brand {
-                width: 100% !important;
-                flex: 0 0 auto !important;
-                justify-content: center !important;
-                margin: 0 !important;
-                padding: 0 !important;
-                font-size: 4.5pt !important;
-                line-height: 1 !important;
-            }
-
-            .qr-label-card .qr-brand-logo {
-                width: 6px !important;
-                height: 6px !important;
-                max-width: 6px !important;
-                max-height: 6px !important;
-                flex: 0 0 6px !important;
-            }
     }
 </style>
 
@@ -398,8 +288,7 @@
             <div>
                 <h3>Etiquetas QR de Inventario</h3>
                 <p class="qr-toolbar-description">
-                    Las etiquetas pequeñas muestran únicamente el QR.
-                    Desde 3 × 3 cm se incluyen los datos del activo y el logo.
+                    Selecciona el tamaño de la etiqueta para vista previa e impresión.
                 </p>
             </div>
             <div class="d-flex flex-wrap gap-2">
@@ -448,7 +337,7 @@
             {
                 @foreach (var item in Model.Products)
                 {
-                    <div class="qr-label-card has-details">
+                    <div class="qr-label-card">
                         <div class="product-code" title="@item.Code">
                             @item.Code
                         </div>
@@ -461,7 +350,7 @@
 
                         <div class="qr-brand">
                             <img src="~/images/logo.png" alt="Logo SuperVigilancia" class="qr-brand-logo" />
-                            <span>SuperVigilancia</span>
+                            <span>SuperVigilancia SRL</span>
                         </div>
                     </div>
                 }
@@ -509,30 +398,8 @@
             page.style.setProperty('--label-width', width + 'cm');
             page.style.setProperty('--label-height', height + 'cm');
 
-            const showDetails = width >= 3 && height >= 3;
-            const labels = container.querySelectorAll('.qr-label-card');
-
-            labels.forEach(label => {
-                label.classList.toggle('has-details', showDetails);
-                label.classList.toggle('qr-only', !showDetails);
-
-                const name = label.querySelector('.product-name');
-                const code = label.querySelector('.product-code');
-                const qrText = label.querySelector('.qr-text');
-                const brand = label.querySelector('.qr-brand');
-
-                if (name) name.hidden = !showDetails;
-                if (code) code.hidden = !showDetails;
-                if (qrText) qrText.hidden = !showDetails;
-                if (brand) brand.hidden = !showDetails;
-            });
-
-            status.textContent =
-                'Tamaño actual: ' + width + ' × ' + height + ' cm. ' +
-                (showDetails
-                    ? 'Se muestra el QR con los datos y el logo.'
-                    : 'Se muestra únicamente el QR para facilitar el escaneo.') +
-                ' Cantidad: ' + labels.length + ' etiqueta(s).';
+            const count = container.querySelectorAll('.qr-label-card').length;
+            status.textContent = 'Tamaño actual: ' + width + ' × ' + height + ' cm. Cantidad: ' + count + ' etiqueta(s).';
         }
 
         widthInput.addEventListener('change', updateLabelSize);
