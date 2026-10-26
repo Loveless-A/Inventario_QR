@@ -6,6 +6,7 @@ using Microsoft.EntityFrameworkCore;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using System.Linq;
+using System;
 
 namespace Inventario_QR.Pages
 {
@@ -20,6 +21,9 @@ namespace Inventario_QR.Pages
 
         [BindProperty(SupportsGet = true)]
         public string? SelectedDepartment { get; set; }
+
+        [BindProperty(SupportsGet = true)]
+        public string? SearchString { get; set; } // NUEVO: Filtro de búsqueda por texto (Producto o Código)
 
         public List<string> Departments { get; set; } = new();
 
@@ -64,6 +68,16 @@ namespace Inventario_QR.Pages
                     .ToListAsync();
 
                 query = query.Where(p => productIdsInDept.Contains(p.Id));
+            }
+
+            // NUEVO: Filtrar por texto de búsqueda (Producto o Código)
+            if (!string.IsNullOrEmpty(SearchString))
+            {
+                string term = SearchString.Trim();
+                query = query.Where(p =>
+                    (p.ProductName != null && p.ProductName.Contains(term)) ||
+                    (p.Code != null && p.Code.Contains(term))
+                );
             }
 
             var products = await query.OrderBy(p => p.Id).ToListAsync();

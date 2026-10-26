@@ -6,6 +6,7 @@ using Inventario_QR.Data;
 using Inventario_QR.Models;
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 
@@ -23,6 +24,10 @@ namespace Inventario_QR.Pages
 
         [BindProperty]
         public Product Product { get; set; } = new();
+
+        // Propiedad para capturar la foto subida desde el formulario
+        [BindProperty]
+        public IFormFile? FotoArchivo { get; set; }
 
         public SelectList CategoriesSL { get; set; } = default!;
 
@@ -84,11 +89,34 @@ namespace Inventario_QR.Pages
         public async Task<IActionResult> OnPostAsync(int? id)
         {
             ModelState.Remove("Product.Category");
+            ModelState.Remove("FotoArchivo");
+            ModelState.Remove("Product.ImagePath");
 
             if (!ModelState.IsValid)
             {
                 await LoadDataAsync();
                 return Page();
+            }
+
+            string? uniqueFileName = null;
+            if (FotoArchivo != null && FotoArchivo.Length > 0)
+            {
+                string uploadsFolder = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", "uploads", "products");
+                if (!Directory.Exists(uploadsFolder))
+                {
+                    Directory.CreateDirectory(uploadsFolder);
+                }
+
+                string extension = Path.GetExtension(FotoArchivo.FileName);
+                uniqueFileName = $"{Product.Code.Replace("/", "_")}_{Guid.NewGuid().ToString().Substring(0, 6)}{extension}";
+                string filePath = Path.Combine(uploadsFolder, uniqueFileName);
+
+                using (var fileStream = new FileStream(filePath, FileMode.Create))
+                {
+                    await FotoArchivo.CopyToAsync(fileStream);
+                }
+
+                uniqueFileName = $"/uploads/products/{uniqueFileName}";
             }
 
             if (id.HasValue && id.Value > 0)
@@ -104,6 +132,12 @@ namespace Inventario_QR.Pages
                 productInDb.Code = Product.Code;
                 productInDb.ProductName = Product.ProductName;
                 productInDb.Active = Product.Active;
+
+                // Actualizar la ruta de la imagen solo si el usuario subió una nueva foto
+                if (uniqueFileName != null)
+                {
+                    productInDb.ImagePath = uniqueFileName;
+                }
 
                 // Obtener detalles actuales en BD
                 var existingDetails = await _context.ProductDetails
@@ -150,6 +184,11 @@ namespace Inventario_QR.Pages
             else
             {
                 // MODO CREACIÓN
+                if (uniqueFileName != null)
+                {
+                    Product.ImagePath = uniqueFileName;
+                }
+
                 _context.Products.Add(Product);
                 await _context.SaveChangesAsync();
 

@@ -11,21 +11,60 @@
             <h3 class="mb-0 text-dark fw-bold">@(isEdit ? "Modificar Producto" : "Registrar Nuevo Producto")</h3>
         </div>
         <div class="card-body p-4">
-            <form method="post">
+            <form method="post" enctype="multipart/form-data">
                 @Html.AntiForgeryToken()
                 <div asp-validation-summary="All" class="text-danger mb-3"></div>
 
                 <input type="hidden" asp-for="Product.Id" />
 
-                <!-- DISEÑO EN DOS COLUMNAS (LADO A LADO) -->
                 <div class="row g-4">
 
-                    <!-- COLUMNA IZQUIERDA: Formulario Principal -->
                     <div class="col-lg-6">
                         <div class="card bg-light border-0 p-4 h-100 shadow-sm">
                             <h5 class="mb-3 text-primary fw-bold">📝 Datos Generales</h5>
 
-                            <!-- SELECT CATEGORÍA -->
+                            <!-- FOTOGRAFÍA DEL PRODUCTO ADAPTADA CON DRAG & DROP Y CTRL+V -->
+                            <div class="mb-3 text-center">
+                                <label class="form-label fw-bold d-block text-start">Fotografía del Producto</label>
+
+                                <!-- Zona de arrastre e interacción -->
+                                <div id="dropZone" class="mb-2 position-relative d-inline-block bg-white p-2 rounded border border-3 border-dashed border-secondary shadow-sm" style="cursor: pointer; transition: background 0.2s;">
+                                    <img id="fotoActual"
+                                         src="@(!string.IsNullOrEmpty(Model.Product.ImagePath) ? Model.Product.ImagePath : "/images/default-product.png")"
+                                         alt="Foto del Producto"
+                                         class="rounded"
+                                         style="max-width: 250px; max-height: 200px; width: auto; height: auto; object-fit: contain; display: block;" />
+                                </div>
+
+                                <div class="input-group input-group-sm">
+                                    <input type="file" id="fotoArchivo" name="FotoArchivo" class="form-control" accept="image/*" />
+                                </div>
+                                <small class="text-muted d-block mt-1">
+                                    Puedes <strong>Elegir archivo</strong>, <strong>Arrastrar la imagen aquí</strong> o presionar <strong>Ctrl + V</strong> para pegar.
+                                </small>
+                            </div>
+
+                            <!-- MODAL PARA RECORTAR FOTO DEL PRODUCTO -->
+                            <div class="modal fade" id="modalRecorte" tabindex="-1" aria-hidden="true" data-bs-backdrop="static">
+                                <div class="modal-dialog modal-dialog-centered modal-lg">
+                                    <div class="modal-content shadow-lg border-0">
+                                        <div class="modal-header bg-dark text-white">
+                                            <h5 class="modal-title fw-bold">✂️ Ajustar y Recortar Imagen del Producto</h5>
+                                            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+                                        </div>
+                                        <div class="modal-body text-center bg-black p-4">
+                                            <div style="max-height: 400px; overflow: hidden;">
+                                                <img id="imagenParaRecortar" src="" alt="Recortar" style="max-width: 100%; display: block;" />
+                                            </div>
+                                        </div>
+                                        <div class="modal-footer bg-light">
+                                            <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Cancelar</button>
+                                            <button type="button" id="btnConfirmarRecorte" class="btn btn-primary btn-sm fw-bold px-4">✓ Recortar y Usar</button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
                             <div class="mb-3">
                                 <label asp-for="Product.CategoryId" class="form-label fw-bold">Categoría</label>
                                 <div class="input-group">
@@ -501,6 +540,140 @@
                     alertDiv.classList.remove('d-none');
                 }
             });
+
+            let cropper = null;
+            const fotoArchivoInput = document.getElementById('fotoArchivo');
+            const imagenParaRecortar = document.getElementById('imagenParaRecortar');
+            const modalRecorteElement = document.getElementById('modalRecorte');
+            const modalRecorte = modalRecorteElement ? new bootstrap.Modal(modalRecorteElement) : null;
+            const btnConfirmarRecorte = document.getElementById('btnConfirmarRecorte');
+            const fotoActual = document.getElementById('fotoActual');
+            const dropZone = document.getElementById('dropZone');
+
+            // Función centralizada para procesar un archivo de imagen y abrir Cropper
+            function procesarImagenParaRecorte(file) {
+                if (!file || !file.type.startsWith('image/')) {
+                    alert('Por favor, selecciona o pega un archivo de imagen válido.');
+                    return;
+                }
+                const reader = new FileReader();
+                reader.onload = function (event) {
+                    imagenParaRecortar.src = event.target.result;
+                    if (modalRecorte) {
+                        modalRecorte.show();
+                    }
+                };
+                reader.readAsDataURL(file);
+            }
+
+            // 1. SELECCIÓN VÍA INPUT FILE
+            if (fotoArchivoInput) {
+                fotoArchivoInput.addEventListener('click', function () {
+                    this.value = ''; // Limpiar para permitir volver a elegir la misma imagen
+                });
+
+                fotoArchivoInput.addEventListener('change', function (e) {
+                    const files = e.target.files;
+                    if (files && files.length > 0) {
+                        procesarImagenParaRecorte(files[0]);
+                    }
+                });
+            }
+
+            // 2. PEGAR DESDE EL PORTAPAPELES (Ctrl + V)
+            document.addEventListener('paste', function (e) {
+                const items = (e.clipboardData || e.originalEvent.clipboardData).items;
+                for (let index = 0; index < items.length; index++) {
+                    const item = items[index];
+                    if (item.kind === 'file' && item.type.startsWith('image/')) {
+                        const blob = item.getAsFile();
+                        procesarImagenParaRecorte(blob);
+                        break;
+                    }
+                }
+            });
+
+            // 3. ARRASTRAR Y SOLTAR (Drag & Drop)
+            if (dropZone) {
+                ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+                    dropZone.addEventListener(eventName, function (e) {
+                        e.preventDefault();
+                        e.stopPropagation();
+                    }, false);
+                });
+
+                ['dragenter', 'dragover'].forEach(eventName => {
+                    dropZone.addEventListener(eventName, function () {
+                        dropZone.classList.add('bg-light', 'border-primary');
+                    }, false);
+                });
+
+                ['dragleave', 'drop'].forEach(eventName => {
+                    dropZone.addEventListener(eventName, function () {
+                        dropZone.classList.remove('bg-light', 'border-primary');
+                    }, false);
+                });
+
+                dropZone.addEventListener('drop', function (e) {
+                    const dt = e.dataTransfer;
+                    const files = dt.files;
+                    if (files && files.length > 0) {
+                        procesarImagenParaRecorte(files[0]);
+                    }
+                }, false);
+            }
+
+            // 4. CONFIGURACIÓN Y RECORTE LIBRE DE CROPPER.JS
+            if (modalRecorteElement) {
+                modalRecorteElement.addEventListener('shown.bs.modal', function () {
+                    if (cropper) {
+                        cropper.destroy();
+                    }
+                    cropper = new Cropper(imagenParaRecortar, {
+                        aspectRatio: NaN, // Recorte libre (se adapta a cualquier forma de producto)
+                        viewMode: 1,
+                        autoCropArea: 0.9,
+                        responsive: true,
+                    });
+                });
+
+                modalRecorteElement.addEventListener('hidden.bs.modal', function () {
+                    if (cropper) {
+                        cropper.destroy();
+                        cropper = null;
+                    }
+                });
+            }
+
+            // 5. CONFIRMAR RECORTE Y ASIGNAR AL INPUT
+            if (btnConfirmarRecorte) {
+                btnConfirmarRecorte.onclick = function () {
+                    if (!cropper) return;
+
+                    const croppedData = cropper.getData();
+                    const canvas = cropper.getCroppedCanvas({
+                        width: Math.round(croppedData.width),
+                        height: Math.round(croppedData.height),
+                        imageSmoothingEnabled: true,
+                        imageSmoothingQuality: 'high',
+                    });
+
+                    canvas.toBlob(function (blob) {
+                        const archivoRecortado = new File([blob], "producto_recortado.png", { type: "image/png" });
+                        const dataTransfer = new DataTransfer();
+                        dataTransfer.items.add(archivoRecortado);
+                        fotoArchivoInput.files = dataTransfer.files;
+
+                        if (fotoActual) {
+                            fotoActual.src = canvas.toDataURL();
+                        }
+
+                        if (modalRecorte) {
+                            modalRecorte.hide();
+                        }
+                    }, 'image/png');
+                };
+            }
         });
     </script>
 }

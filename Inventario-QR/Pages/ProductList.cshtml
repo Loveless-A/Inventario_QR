@@ -19,7 +19,7 @@
         </div>
     </div>
 
-    <!-- Barra de Filtro por Departamento (Limpia y profesional) -->
+    <!-- Barra de Filtros (Departamento y Búsqueda por Producto / Código) -->
     <form method="get" class="row g-3 mb-4 align-items-center d-print-none bg-light p-3 rounded-3 shadow-sm">
         <div class="col-auto">
             <label for="SelectedDepartment" class="col-form-label fw-bold small text-secondary">Filtrar por Departamento:</label>
@@ -33,21 +33,32 @@
                 }
             </select>
         </div>
+
+        <div class="col-auto ms-md-3">
+            <label for="SearchString" class="col-form-label fw-bold small text-secondary">Buscar Producto o Código:</label>
+        </div>
+        <div class="col-auto">
+            <div class="input-group input-group-sm shadow-sm">
+                <input type="text" name="SearchString" value="@Model.SearchString" class="form-control" placeholder="Escribe producto o código..." />
+                <button type="submit" class="btn btn-outline-success">🔍 Buscar</button>
+            </div>
+        </div>
     </form>
 
-    <!-- Tabla de Inventario General -->
+    <!-- Tabla de Inventario General con el formato compacto unificado -->
     <div class="card shadow-sm border-0 rounded-3">
         <div class="card-body p-0">
             <div class="table-responsive">
                 <table class="table table-bordered table-hover align-middle mb-0">
                     <thead class="table-light text-uppercase fs-7 text-secondary text-center">
                         <tr>
-                            <th class="py-3" style="width: 60px;">Nro</th>
-                            <th class="py-3" style="width: 140px;">Código</th>
-                            <th class="py-3" style="width: 200px;">Producto</th>
-                            <th class="py-3">Elemento (Bloque Principal / Accesorios)</th>
-                            <th class="py-3" style="width: 110px;">Cant. Obtenida</th>
-                            <th class="py-3" style="width: 260px;">Check / Motivo u Observación</th>
+                            <th class="py-3" style="width: 50px;">Nro</th>
+                            <th class="py-3" style="width: 110px;">Código</th>
+                            <th class="py-3" style="width: 320px;">Producto y Características</th>
+                            <th class="py-3">Accesorios / Complementos</th>
+                            <th class="py-3" style="width: 50px;">Cant.</th>
+                            <th class="py-3" style="width: 250px;">Observación</th>
+                            <th class="py-3" style="width: 30px;"></th>
                         </tr>
                     </thead>
                     <tbody>
@@ -55,71 +66,98 @@
                         {
                             @foreach (var item in Model.InventoryList)
                             {
-                                <tr>
-                                    <td class="text-center fw-bold text-secondary">@item.RowNumber</td>
-                                    <td><strong class="text-primary">@item.Code</strong></td>
-                                    <td class="fw-medium text-dark">@item.ProductName</td>
-                                    <td>
-                                        <div class="p-2">
-                                            <!-- SECCIÓN 1: BLOQUE PRINCIPAL (Características) -->
-                                            @if (item.Characteristics.Any())
+                                var characteristics = item.Characteristics != null ? item.Characteristics.ToList() : new List<ProductList.DetailRowVm>();
+                                var complements = item.Complements != null ? item.Complements.ToList() : new List<ProductList.DetailRowVm>();
+
+                                int compCount = complements.Count;
+                                int totalRows = compCount > 0 ? compCount : 1;
+                                bool isFirstRow = true;
+
+                                @if (compCount > 0)
+                                {
+                                    @foreach (var comp in complements)
+                                    {
+                                        <tr>
+                                            @if (isFirstRow)
                                             {
-                                                <div class="d-flex align-items-center justify-content-between bg-light p-2 rounded mb-2 border">
-                                                    <div class="fw-bold text-dark small">
-                                                        🖥️ Bloque Principal:
-                                                    </div>
-                                                    <span class="badge bg-secondary text-white px-2">Cantidad: 1</span>
-                                                </div>
-                                                <ul class="list-unstyled ps-3 mb-2 small text-muted">
-                                                    @foreach (var ch in item.Characteristics)
+                                                <td class="text-center fw-bold align-middle" rowspan="@totalRows">@item.RowNumber</td>
+                                                <td class="align-middle text-center" rowspan="@totalRows"><strong class="text-primary">@item.Code</strong></td>
+
+                                                <!-- PRODUCTO Y SUS CARACTERÍSTICAS PRINCIPALES JUNTAS EN UNA SOLA CELDA -->
+                                                <td class="align-middle" rowspan="@totalRows">
+                                                    <div class="fw-bold text-dark mb-1">@item.ProductName</div>
+                                                    @if (characteristics.Any())
                                                     {
-                                                        <li class="py-1 border-bottom border-light d-flex justify-content-between align-items-center">
-                                                            <span>• @ch.DetailName</span>
-                                                            <span class="badge bg-light text-dark border px-2">Cant: @ch.Amount</span>
-                                                        </li>
+                                                        <div class="ps-2 border-start border-3 border-success text-muted small">
+                                                            @foreach (var ch in characteristics)
+                                                            {
+                                                                <div><span class="fw-semibold">@ch.DetailName:</span> (Cant: @ch.Amount)</div>
+                                                            }
+                                                        </div>
                                                     }
-                                                </ul>
+                                                    else
+                                                    {
+                                                        <span class="text-muted small fst-italic">Sin características</span>
+                                                    }
+                                                </td>
+
+                                                isFirstRow = false;
                                             }
 
-                                            <!-- SECCIÓN 2: COMPLEMENTOS / ACCESORIOS -->
-                                            @if (item.Complements.Any())
-                                            {
-                                                @foreach (var comp in item.Complements)
-                                                {
-                                                    <div class="d-flex align-items-center justify-content-between py-1 border-bottom border-light small">
-                                                        <span class="text-dark">• @comp.DetailName</span>
-                                                        <span class="badge bg-light text-dark border px-2">Cantidad: @comp.Amount</span>
+                                            <!-- ACCESORIOS EN FILAS SEPARADAS -->
+                                            <td class="align-middle py-2">
+                                                <span class="text-dark small">@comp.DetailName</span>
+                                            </td>
+                                            <td class="text-center align-middle">
+                                                <span class="badge bg-light text-dark border px-2">@comp.Amount</span>
+                                            </td>
+                                            <td class="align-middle">
+                                                <div class="input-group input-group-sm">
+                                                </div>
+                                            </td>
+                                            <td class="align-middle">
+                                                <div class="input-group input-group-sm">
+                                                    <div class="input-group-text bg-white">
+                                                        <input type="checkbox" class="form-check-input mt-0" title="Marcar como verificado" />
                                                     </div>
-                                                }
-                                            }
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    }
+                                }
+                                else
+                                {
+                                    // CASO: PRODUCTO SIN ACCESORIOS
+                                    <tr>
+                                        <td class="text-center fw-bold align-middle">@item.RowNumber</td>
+                                        <td class="align-middle text-center"><strong class="text-primary">@item.Code</strong></td>
 
-                                            <!-- Si no hay elementos -->
-                                            @if (!item.Characteristics.Any() && !item.Complements.Any())
+                                        <td class="align-middle">
+                                            <div class="fw-bold text-dark mb-1">@item.ProductName</div>
+                                            @if (characteristics.Any())
                                             {
-                                                <span class="text-muted small fst-italic">Sin elementos registrados.</span>
+                                                <div class="ps-2 border-start border-3 border-success text-muted small">
+                                                    @foreach (var ch in characteristics)
+                                                    {
+                                                        <div><span class="fw-semibold">@ch.DetailName:</span> (Cant: @ch.Amount)</div>
+                                                    }
+                                                </div>
                                             }
-                                        </div>
-                                    </td>
-                                    <!-- Cantidad Obtenida -->
-                                    <td class="text-center">
-                                        <input type="number" class="form-control form-control-sm text-center shadow-sm" value="1" min="0" />
-                                    </td>
-                                    <!-- Observación y Check -->
-                                    <td>
-                                        <div class="input-group input-group-sm shadow-sm">
-                                            <input type="text" class="form-control" placeholder="Observación..." />
-                                            <div class="input-group-text bg-white">
-                                                <input class="form-check-input mt-0" type="checkbox" aria-label="Checkbox de verificación" />
-                                            </div>
-                                        </div>
-                                    </td>
-                                </tr>
+                                            else
+                                            {
+                                                <span class="text-muted small fst-italic">Sin características</span>
+                                            }
+                                        </td>
+
+                                        <td class="align-middle text-muted fst-italic text-center" colspan="4">Sin accesorios registrados.</td>
+                                    </tr>
+                                }
                             }
                         }
                         else
                         {
                             <tr>
-                                <td colspan="6" class="text-center py-5 text-muted">
+                                <td colspan="7" class="text-center py-5 text-muted">
                                     <p class="mb-0">No hay productos registrados con los filtros seleccionados.</p>
                                 </td>
                             </tr>

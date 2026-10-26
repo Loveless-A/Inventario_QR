@@ -43,17 +43,12 @@ namespace Inventario_QR.Pages
         [BindProperty(SupportsGet = true)]
         public string? SelectedDepartment { get; set; }
 
+        [BindProperty(SupportsGet = true)]
+        public string? SearchString { get; set; } // NUEVO: Texto libre para buscar personal o producto/código
+
         public List<string> Departments { get; set; } = new()
         {
-            "La Paz",
-            "Santa Cruz",
-            "Cochabamba",
-            "Oruro",
-            "Potosí",
-            "Tarija",
-            "Chuquisaca",
-            "Beni",
-            "Pando"
+            "La Paz", "Santa Cruz", "Cochabamba", "Oruro", "Potosí", "Tarija", "Chuquisaca", "Beni", "Pando"
         };
 
         public async Task OnGetAsync()
@@ -78,7 +73,7 @@ namespace Inventario_QR.Pages
                 if (characteristicRecord?.Person != null)
                 {
                     var person = characteristicRecord.Person;
-                    assignedName = $"{person.Identification} - {person.LastName}".Trim();
+                    assignedName = $"{person.LastName} (CI: {person.Identification})".Trim();
                     localization = characteristicRecord.Localization ?? string.Empty;
                 }
 
@@ -115,7 +110,18 @@ namespace Inventario_QR.Pages
             if (!string.IsNullOrEmpty(SelectedDepartment))
             {
                 list = list.Where(x => !string.IsNullOrEmpty(x.Localization) &&
-                                       x.Localization.Contains(SelectedDepartment, StringComparison.OrdinalIgnoreCase)).ToList();
+                                        x.Localization.Contains(SelectedDepartment, StringComparison.OrdinalIgnoreCase)).ToList();
+            }
+
+            // NUEVO: Aplicar filtro de búsqueda por texto libre (Personal, Producto o Código)
+            if (!string.IsNullOrEmpty(SearchString))
+            {
+                string query = SearchString.Trim();
+                list = list.Where(x =>
+                    x.ProductName.Contains(query, StringComparison.OrdinalIgnoreCase) ||
+                    x.Code.Contains(query, StringComparison.OrdinalIgnoreCase) ||
+                    x.AssignedToName.Contains(query, StringComparison.OrdinalIgnoreCase)
+                ).ToList();
             }
 
             // Reenumerar filas de forma consecutiva tras el filtrado

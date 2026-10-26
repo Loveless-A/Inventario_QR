@@ -17,7 +17,7 @@ namespace Inventario_QR.Migrations
         {
 #pragma warning disable 612, 618
             modelBuilder
-                .HasAnnotation("ProductVersion", "8.0.10")
+                .HasAnnotation("ProductVersion", "8.0.11")
                 .HasAnnotation("Relational:MaxIdentifierLength", 63);
 
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
@@ -268,6 +268,11 @@ namespace Inventario_QR.Migrations
                         .IsRequired()
                         .HasColumnType("text")
                         .HasColumnName("code");
+
+                    b.Property<string>("ImagePath")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("image");
 
                     b.Property<string>("ProductName")
                         .IsRequired()

@@ -43,14 +43,13 @@
                 </div>
                 <div class="col-12 col-md-3 d-flex justify-content-md-end align-items-center gap-2">
                     <label for="pageSizeSelect" class="small text-muted text-nowrap mb-0">Mostrar:</label>
-                    <select id="pageSizeSelect" name="PageSize" class="form-select form-select-sm w-auto" onchange="document.getElementById('searchForm').submit();">
+                    <select id="pageSizeSelect" name="PageSize" class="form-select form-select-sm w-auto">
                         <option value="10" selected="@(Model.PageSize == 10)">10</option>
                         <option value="20" selected="@(Model.PageSize == 20)">20</option>
                         <option value="30" selected="@(Model.PageSize == 30)">30</option>
                         <option value="50" selected="@(Model.PageSize == 50)">50</option>
                         <option value="100" selected="@(Model.PageSize == 100)">100</option>
                     </select>
-                    <input type="hidden" name="CurrentPage" value="1" />
                 </div>
             </form>
         </div>
@@ -168,9 +167,40 @@
 @section Scripts {
     <script>
         document.addEventListener('DOMContentLoaded', function () {
-            let searchTimeout;
-            const searchInput = document.getElementById('searchTermInput');
-            const searchForm = document.getElementById('searchForm');
+             let searchTimeout;
+             const searchInput = document.getElementById('searchTermInput');
+             const searchForm = document.getElementById('searchForm');
+             const pageSizeSelect = document.getElementById('pageSizeSelect');
+
+             // --- MEMORIA DE PAGE SIZE ---
+             const PAGE_SIZE_KEY = 'inventory_preferred_pagesize';
+
+             // Si el usuario tenía un tamaño guardado y la URL no lo trae explícitamente, aplicarlo
+             const urlParams = new URLSearchParams(window.location.search);
+             if (!urlParams.has('PageSize')) {
+                 const savedPageSize = localStorage.getItem(PAGE_SIZE_KEY);
+                 if (savedPageSize && pageSizeSelect) {
+                     pageSizeSelect.value = savedPageSize;
+                     // Si el select cambió respecto al modelo inicial, enviamos el form para refrescar con la cantidad correcta
+                     if (parseInt(savedPageSize) !== @Model.PageSize) {
+                         searchForm.submit();
+                         return;
+                     }
+                 }
+             }
+
+             if (pageSizeSelect) {
+                 pageSizeSelect.addEventListener('change', function () {
+                     localStorage.setItem(PAGE_SIZE_KEY, this.value);
+                     // Al cambiar el tamaño de página, reiniciamos a la página 1 de forma limpia
+                     const hiddenPage = document.createElement('input');
+                     hiddenPage.type = 'hidden';
+                     hiddenPage.name = 'CurrentPage';
+                     hiddenPage.value = '1';
+                     searchForm.appendChild(hiddenPage);
+                     searchForm.submit();
+                 });
+             }
 
             if (searchInput && searchForm) {
                 searchInput.addEventListener('input', function () {

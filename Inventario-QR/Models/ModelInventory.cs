@@ -139,7 +139,9 @@ namespace Inventario_QR.Models
         [Column("active")]
         public bool Active { get; set; } = true;
 
-        // --- Relación con Categoría (Category) ---
+        [Column("image")]
+        public string ImagePath { get; set; }
+
         [Column("category_id")]
         public int? CategoryId { get; set; }
 
